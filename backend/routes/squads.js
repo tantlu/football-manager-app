@@ -1,4 +1,4 @@
-// File: routes/squads.js
+// File: backend/routes/squads.js (Đã sửa lỗi bảo mật)
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
@@ -8,38 +8,64 @@ const { parseHtmlFile } = require('../utils/parser');
 
 const router = express.Router();
 const prisma = new PrismaClient();
-const upload = multer({ storage: multer.memoryStorage() }); // Lưu file vào bộ nhớ tạm
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Hàm kiểm tra quyền sở hữu mùa giải
+const checkSeasonOwnership = async (res, seasonId, userId) => {
+    const season = await prisma.season.findFirst({
+        where: {
+            id: parseInt(seasonId),
+            userId: userId,
+        },
+    });
+    if (!season) {
+        res.status(404).json({ message: "Season not found or you do not have permission." });
+        return false;
+    }
+    return true;
+};
 
 // Lấy dữ liệu đội hình của một mùa giải: GET /api/squads/:seasonId
 router.get('/:seasonId', authMiddleware, async (req, res) => {
     const { seasonId } = req.params;
-    const players = await prisma.player.findMany({
-        where: { seasonId: parseInt(seasonId) },
-        orderBy: { ca: 'desc' } // Sắp xếp theo CA giảm dần
-    });
-    res.json(players);
+    const userId = req.userData.userId;
+
+    try {
+        // <-- THÊM MỚI: Kiểm tra quyền sở hữu trước khi hành động -->
+        const isOwner = await checkSeasonOwnership(res, seasonId, userId);
+        if (!isOwner) return;
+
+        const players = await prisma.player.findMany({
+            where: { seasonId: parseInt(seasonId) },
+            orderBy: { ca: 'desc' }
+        });
+        res.json(players);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch squad data.", error: error.message });
+    }
 });
 
 
 // Upload đội hình: POST /api/squads/upload/:seasonId
 router.post('/upload/:seasonId', authMiddleware, upload.single('squadFile'), async (req, res) => {
     const { seasonId } = req.params;
+    const userId = req.userData.userId;
 
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
 
     try {
-        // Phân tích file HTML từ buffer
-        const playersData = parseHtmlFile(req.file.buffer);
+        // <-- THÊM MỚI: Kiểm tra quyền sở hữu trước khi hành động -->
+        const isOwner = await checkSeasonOwnership(res, seasonId, userId);
+        if (!isOwner) return;
 
-        // Chuẩn bị dữ liệu để thêm vào DB
+        const playersData = parseHtmlFile(req.file.buffer);
         const playersToCreate = playersData.map(player => ({
             ...player,
             seasonId: parseInt(seasonId)
         }));
 
-        // Xóa dữ liệu cũ (nếu có) và thêm dữ liệu mới
         await prisma.$transaction([
             prisma.player.deleteMany({ where: { seasonId: parseInt(seasonId) } }),
             prisma.player.createMany({ data: playersToCreate })
@@ -58,20 +84,10 @@ router.delete('/:seasonId', authMiddleware, async (req, res) => {
     const userId = req.userData.userId;
 
     try {
-        // BƯỚC BẢO MẬT QUAN TRỌNG: Kiểm tra xem mùa giải này có thực sự thuộc về người dùng đang đăng nhập không
-        const season = await prisma.season.findFirst({
-            where: {
-                id: parseInt(seasonId),
-                userId: userId,
-            },
-        });
+        // Logic kiểm tra quyền sở hữu của bạn ở đây đã rất tốt!
+        const isOwner = await checkSeasonOwnership(res, seasonId, userId);
+        if (!isOwner) return;
 
-        // Nếu không tìm thấy mùa giải hoặc không thuộc quyền sở hữu, báo lỗi
-        if (!season) {
-            return res.status(404).json({ message: "Season not found or you do not have permission." });
-        }
-
-        // Nếu hợp lệ, tiến hành xóa tất cả cầu thủ thuộc mùa giải này
         const deleteResult = await prisma.player.deleteMany({
             where: {
                 seasonId: parseInt(seasonId),
