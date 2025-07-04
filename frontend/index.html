@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Squad Manager</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="loginView" class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-body">
+                        <h3 class="card-title text-center mb-4">Login</h3>
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="loginUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="loginUsername" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="loginPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Login</button>
+                        </form>
+                        <hr>
+                        <p class="text-center">Don't have an account? Register now!</p>
+                        <h4 class="text-center mt-4">Register</h4>
+                        <form id="registerForm">
+                            <div class="mb-3">
+                                <label for="registerUsername" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="registerUsername" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="registerPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">Register</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="appView" class="container-fluid mt-4" style="display: none;">
+        <div class="row">
+            <div class="col-lg-2">
+                <div class="sidebar">
+                    <div id="userInfo" class="mb-3">
+                        </div>
+                    <div class="sidebar-card mb-3">
+                        <h5 class="sidebar-card-title">Seasons</h5>
+                        <select id="seasonSelector" class="form-select mb-2"></select>
+                        <button id="createSeasonBtn" class="btn btn-sm btn-success w-100">New Season</button>
+                    </div>
+                    <div class="sidebar-card mb-3">
+                        <h5 class="sidebar-card-title">Top Scorers</h5>
+                        <div id="topScorers"></div>
+                    </div>
+                    <div class="sidebar-card mb-3">
+                        <h5 class="sidebar-card-title">Top Players (CA)</h5>
+                        <div id="topPlayers"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-10">
+                <div class="main-content-card">
+                    <div class="card-header-flex">
+                        <h1 id="squadTitle" class="team-title">SQUAD VIEW</h1>
+                        <div class="filter-container">
+                            <i class="bi bi-search"></i>
+                            <input type="text" id="filterInput" class="form-control" placeholder="Filter Player">
+                        </div>
+                    </div>
+                    <div id="uploadArea" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+                        <label for="fileInput" class="form-label"><b>Upload Squad File</b> for the selected season:</label>
+                        <div class="input-group">
+                            <input type="file" id="fileInput" class="form-control" accept=".html" />
+                            <button id="uploadBtn" class="btn btn-primary">Upload</button>
+                            <button id="deleteSquadBtn" class="btn btn-danger">Delete Squad</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle text-start">
+                             <thead>
+                                <tr>
+                                    <th onclick="sortTable('dorsal')">No.</th>
+                                    <th onclick="sortTable('name')">Name</th>
+                                    <th onclick="sortTable('ca')">CA</th>
+                                    <th onclick="sortTable('age')">Age</th>
+                                    <th onclick="sortTable('morale')">Morale</th>
+                                    <th onclick="sortTable('personality')">Personality</th>
+                                    <th onclick="sortTable('workRate')">Wor</th>
+                                    <th onclick="sortTable('technique')">Tec</th>
+                                    <th onclick="sortTable('pace')">Pac</th>
+                                    <th onclick="sortTable('value')">Est. Value</th>
+                                    <th onclick="sortTable('matches')">Parties</th>
+                                    <th onclick="sortTable('goals')">G/A</th>
+                                    <th onclick="sortTable('avgRating')">Avg. Rat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="playerTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+body {
+    background-color: #f4f6f9;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
+
+.container {
+    max-width: 1800px;
+}
+
+/* Main Card Style */
+.main-content-card {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.team-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.filter-container {
+    position: relative;
+}
+
+.filter-container .bi-search {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+
+#filterInput {
+    padding-left: 30px;
+    width: 250px;
+}
+
+/* Table Styles */
+.table {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.table thead th {
+    background-color: transparent;
+    color: #6c757d;
+    font-weight: 500;
+    border-bottom: 2px solid #dee2e6;
+    cursor: pointer;
+    padding: 8px 5px;
+}
+
+.table tbody tr {
+    background-color: white;
+    vertical-align: middle;
+    border-bottom: 1px solid #f0f0f0;
+}
+.table tbody td {
+    padding: 6px 5px;
+}
+
+.table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.player-name {
+    font-weight: bold;
+    display: block;
+}
+
+.player-position {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+.ca-box, .attribute-box {
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-weight: bold;
+    display: inline-block;
+    color: #333;
+    font-size: 12px;
+    text-align: center;
+    min-width: 30px;
+}
+
+.stocking-box {
+    font-weight: 600;
+    padding: 3px 6px;
+    border-radius: 4px;
+    color: white;
+    text-align: center;
+    font-size: 12px;
+}
+
+.flag-icon {
+    width: 16px;
+    height: 12px;
+    object-fit: contain;
+    margin-right: 8px;
+    border: 1px solid #eee;
+}
+
+/* Sidebar Styles */
+.sidebar-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.sidebar-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+}
+
+.sidebar-table {
+    width: 100%;
+    font-size: 14px;
+}
+.sidebar-table td {
+    padding: 4px 0;
+}
+.sidebar-table .rating-value {
+    font-weight: bold;
+    float: right;
+}

@@ -1,0 +1,53 @@
+// File: prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+  seasons   Season[]
+  @@map("users")
+}
+
+model Season {
+  id          Int      @id @default(autoincrement())
+  seasonName  String   @map("season_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int      @map("user_id")
+  players     Player[]
+  @@map("seasons")
+}
+
+model Player {
+  id         Int     @id @default(autoincrement())
+  seasonId   Int     @map("season_id")
+  name       String
+  position   String
+  age        Int
+  ca         Int
+  pa         Int
+  value      Float
+  avgRating  Float   @map("avg_rating")
+  morale     String
+  matches    String
+  goals      Int
+  assists    Int
+  workRate   Int     @map("work_rate")
+  technique  Int
+  pace       Int
+  personality String
+  nation     String
+  dorsal     Int?
+  season     Season  @relation(fields: [seasonId], references: [id])
+  @@map("players")
+}
