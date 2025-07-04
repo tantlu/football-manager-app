@@ -1,7 +1,6 @@
 // File: frontend/script.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
     const API_URL = 'https://football-manager-app.onrender.com/api';
 
     let token = null;
@@ -10,13 +9,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStoryId = null;
     let playersData = [];
     let currentSort = { column: 'ca', order: 'desc' };
-    let lastViewedHash = '#/squad'; // Biến mới để biết quay về đâu
+    let lastViewedHash = '#/squad';
 
     // --- LẤY CÁC PHẦN TỬ GIAO DIỆN ---
     const loginView = document.getElementById('loginView');
     const appView = document.getElementById('appView');
     const storyDetailView = document.getElementById('storyDetailView');
     const playerDetailView = document.getElementById('playerDetailView');
+    const allMainViews = [loginView, appView, storyDetailView, playerDetailView];
+    // ... và các getElementById khác ...
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const mySquadTab = document.getElementById('mySquadTab');
@@ -52,18 +53,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const editStoryContentTextarea = document.getElementById('editStoryContentTextarea');
     const saveChangesBtn = document.getElementById('saveChangesBtn');
     const cancelEditBtn = document.getElementById('cancelEditBtn');
-    const commentSection = document.getElementById('commentSection');
     const commentForm = document.getElementById('commentForm');
     const commentContent = document.getElementById('commentContent');
     const commentList = document.getElementById('commentList');
-    const allMainViews = [loginView, appView, storyDetailView, playerDetailView];
+
 
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
-        const options = {
-            method,
-            headers: {}
-        };
+        const options = { method, headers: {} };
         if (token) {
             options.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -81,16 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errorData = await response.json();
                 throw new Error(errorData.message || 'API call failed');
             }
-            if (response.status === 204 || response.headers.get("content-length") === "0") {
-                return null;
-            }
+            if (response.status === 204 || response.headers.get("content-length") === "0") return null;
             return response.json();
         } catch (error) {
             alert(error.message);
             console.error('API Error:', error);
-            if (error.message.includes('Authentication failed')) {
-                handleLogout();
-            }
+            if (error.message.includes('Authentication failed')) handleLogout();
             return null;
         }
     };
@@ -128,12 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('username');
         localStorage.removeItem('userId');
         location.hash = '';
-        showLoginView();
+        showView(loginView);
     };
 
     // --- LOGIC ĐỊNH TUYẾN (ROUTING) ---
     const router = async () => {
-        console.log('Router is running... Hash is:', location.hash);
         const path = location.hash.slice(2).split('/');
         const currentRoute = path[0] || 'squad';
         const param = path[1];
@@ -143,17 +135,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Mặc định hiển thị appView, các hàm con sẽ xử lý các view chi tiết
-        showView(appView);
-
         switch (currentRoute) {
             case 'squad':
-                showSquadView();
-                lastViewedHash = '#/squad';
-                break;
             case 'forum':
-                await showForumView();
-                lastViewedHash = '#/forum';
+                showView(appView);
+                if (currentRoute === 'squad') showSquadView();
+                else await showForumView();
+                lastViewedHash = location.hash;
                 break;
             case 'story':
                 if (param) await handleViewStoryDetail(param);
@@ -168,26 +156,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- CÁC HÀM HIỂN THỊ VIEW ---
-    const showLoginView = () => {
-        loginView.style.display = 'block';
-        appView.style.display = 'none';
-        storyDetailView.style.display = 'none';
-    };
-
-    const showAppView = () => {
-        loginView.style.display = 'none';
-        appView.style.display = 'block';
-        const username = localStorage.getItem('username');
-        userInfoDiv.innerHTML = `
-            <p>Welcome, <strong>${username}</strong></p>
-            <button id="logoutBtn" class="btn btn-sm btn-danger w-100">Logout</button>
-        `;
-        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    };
-
     const showView = (viewToShow) => {
         allMainViews.forEach(view => view.style.display = 'none');
-        viewToShow.style.display = 'block';
+        if (viewToShow) viewToShow.style.display = 'block';
     };
 
     const showSquadView = () => {
@@ -231,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 await fetchSeasons();
                 seasonSelector.value = newSeason.id;
                 location.hash = '#/squad';
-                await fetchSquadForSeason(newSeason.id);
             }
         }
     };
@@ -365,9 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleBackToForum = () => { location.hash = '#/forum'; };
-    const handleBackClick = () => {
-        location.hash = lastViewedHash;
-    };
 
     const handleEditStoryClick = () => {
         editStoryTitleInput.value = detailStoryTitle.innerText;
@@ -483,20 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTable(sorted, playerTable); // Chú ý: Sắp xếp chỉ áp dụng cho bảng chính
     };
 
-    const initializeApp = async () => {
-        token = localStorage.getItem('authToken');
-        if (token) {
-            showAppView();
-            await fetchSeasons();
-            await router();
-        } else {
-            showLoginView();
-        }
-    };
-
-    // --- LOGIC MỚI: XEM CHI TIẾT CẦU THỦ ---
     const handleViewPlayerDetail = async (playerId) => {
-        console.log('Viewing player detail for ID:', playerId);
         const player = await apiCall(`/players/${playerId}`);
         if(player) {
             renderPlayerDetail(player);
@@ -505,7 +459,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderPlayerDetail = (player) => {
-        // Điền thông tin cơ bản
         document.getElementById('playerName').innerText = player.name;
         document.getElementById('playerPosition').innerText = player.position;
         document.getElementById('playerCA').innerText = player.ca;
@@ -518,7 +471,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('playerRightFoot').innerText = player.rightFoot;
         document.getElementById('playerLeftFoot').innerText = player.leftFoot;
         
-        // Render các cột chỉ số
         const technicalAttrs = { Corners: player.corners, Crossing: player.crossing, Dribbling: player.dribbling, Finishing: player.finishing, "First Touch": player.firstTouch, "Free Kick": player.freeKick, Heading: player.heading, "Long Shots": player.longShots, "Long Throws": player.longThrows, Marking: player.marking, Passing: player.passing, "Penalty Taking": player.penalty, Tackling: player.tackling, Technique: player.technique };
         const mentalAttrs = { Aggression: player.aggression, Anticipation: player.anticipation, Bravery: player.bravery, Composure: player.composure, Concentration: player.concentration, Decisions: player.decisions, Determination: player.determination, Flair: player.flair, Leadership: player.leadership, "Off The Ball": player.offTheBall, Positioning: player.positioning, Teamwork: player.teamwork, Vision: player.vision, "Work Rate": player.workRate };
         const physicalAttrs = { Acceleration: player.acceleration, Agility: player.agility, Balance: player.balance, "Jumping Reach": player.jumping, "Natural Fitness": player.naturalFit, Pace: player.pace, Stamina: player.stamina, Strength: player.strength };
@@ -530,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderAttributeList = (containerId, attributes) => {
         const container = document.getElementById(containerId);
+        if(!container) return;
         container.innerHTML = Object.entries(attributes).map(([name, value]) => `
             <div class="attribute-row">
                 <span>${name}</span>
@@ -537,12 +490,27 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
     };
+
+    const handleBackClick = () => {
+        location.hash = lastViewedHash;
+    };
+
+    const initializeApp = async () => {
+        token = localStorage.getItem('authToken');
+        if (token) {
+            showView(appView);
+            await fetchSeasons();
+            await router();
+        } else {
+            showView(loginView);
+        }
+    };
         
     // --- GẮN CÁC EVENT LISTENERS ---
     loginForm.addEventListener('submit', handleLogin);
     registerForm.addEventListener('submit', handleRegister);
     createSeasonBtn.addEventListener('click', handleCreateSeason);
-    seasonSelector.addEventListener('change', (e) => fetchSquadForSeason(e.target.value));
+    seasonSelector.addEventListener('change', (e) => { location.hash = '#/squad'; fetchSquadForSeason(e.target.value); });
     uploadBtn.addEventListener('click', handleUpload);
     deleteSquadBtn.addEventListener('click', handleDeleteSquad);
     saveStoryBtn.addEventListener('click', handleSaveStory);
@@ -551,15 +519,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
         renderTable(filtered, playerTable);
     });
-    
     backToForumBtn.addEventListener('click', handleBackToForum);
     document.getElementById('backBtn').addEventListener('click', handleBackClick);
-    
     editStoryBtn.addEventListener('click', handleEditStoryClick);
     cancelEditBtn.addEventListener('click', handleCancelEdit);
     saveChangesBtn.addEventListener('click', handleSaveChanges);
     commentForm.addEventListener('submit', handlePostComment);
-
     window.addEventListener('hashchange', router);
 
     // --- CÁC HÀM TIỆN ÍCH ---
