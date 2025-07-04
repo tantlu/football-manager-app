@@ -2,9 +2,6 @@
 
 Đây là một dự án web full-stack cho phép người dùng quản lý đội hình bóng đá của họ qua các mùa giải, phân tích dữ liệu cầu thủ, và chia sẻ câu chuyện sự nghiệp của mình với một cộng đồng những người cùng đam mê.
 
-![Giao diện ứng dụng](./path/to/your/screenshot.png)
-*Lưu ý: Bạn hãy chụp một tấm ảnh màn hình ứng dụng của mình, đặt tên là `screenshot.png` và thay thế đường dẫn `./path/to/your/screenshot.png` ở trên.*
-
 ## ✨ Tính năng chính
 
 * **Quản lý Tài khoản:** Đăng ký, đăng nhập an toàn sử dụng JWT (JSON Web Tokens).
@@ -80,6 +77,6 @@
         ```
     * Mở file `index.html` bằng trình duyệt (sử dụng extension Live Server của VS Code là tốt nhất).
 
-##  giấy phép
+##  Giấy phép
 
 Dự án này được cấp phép dưới Giấy phép MIT.

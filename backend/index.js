@@ -20,7 +20,9 @@ const seasonRoutes = require('./routes/seasons');
 const squadRoutes = require('./routes/squads');
 const storyRoutes = require('./routes/stories');
 const commentRoutes = require('./routes/comments');
+const playerRoutes = require('./routes/players');
 
+app.use('/api/players', playerRoutes)
 app.use('/api/auth', authRoutes);
 app.use('/api/seasons', seasonRoutes);
 app.use('/api/squads', squadRoutes);

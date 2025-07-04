@@ -30,27 +30,73 @@ model Season {
   @@map("seasons")
 }
 
+// File: backend/prisma/schema.prisma
+
 model Player {
-  id         Int     @id @default(autoincrement())
-  seasonId   Int     @map("season_id")
-  name       String
-  position   String
-  age        Int
-  ca         Int
-  pa         Int
-  value      Float
-  avgRating  Float   @map("avg_rating")
-  morale     String
-  matches    String
-  goals      Int
-  assists    Int
-  workRate   Int     @map("work_rate")
-  technique  Int
-  pace       Int
+  id          Int     @id @default(autoincrement())
+  seasonId    Int     @map("season_id")
+  name        String
+  position    String
+  age         Int
+  ca          Int
+  pa          Int
+  value       Float
+  avgRating   Float   @map("avg_rating")
+  morale      String
+  matches     String
+  goals       Int
+  assists     Int
   personality String
-  nation     String
-  dorsal     Int?
-  season     Season  @relation(fields: [seasonId], references: [id])
+  nation      String
+  dorsal      Int?
+  height      Int?
+  weight      Int?
+  leftFoot    String? @map("left_foot")
+  rightFoot   String? @map("right_foot")
+
+  // Technical Attributes
+  corners     Int?
+  crossing    Int?
+  dribbling   Int?
+  finishing   Int?
+  firstTouch  Int?    @map("first_touch")
+  freeKick    Int?    @map("free_kick")
+  heading     Int?
+  longShots   Int?    @map("long_shots")
+  longThrows  Int?    @map("long_throws")
+  marking     Int?
+  passing     Int?
+  penalty     Int?
+  tackling    Int?
+  technique   Int?
+
+  // Mental Attributes
+  aggression  Int?
+  anticipation Int?
+  bravery     Int?
+  composure   Int?
+  concentration Int?
+  decisions   Int?
+  determination Int?
+  flair       Int?
+  leadership  Int?
+  offTheBall  Int?    @map("off_the_ball")
+  positioning Int?
+  teamwork    Int?
+  vision      Int?
+  workRate    Int?    @map("work_rate")
+
+  // Physical Attributes
+  acceleration Int?
+  agility     Int?
+  balance     Int?
+  jumping     Int?
+  naturalFit  Int?    @map("natural_fitness")
+  pace        Int?
+  stamina     Int?
+  strength    Int?
+
+  season      Season  @relation(fields: [seasonId], references: [id])
   @@map("players")
 }
 

@@ -10,11 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStoryId = null;
     let playersData = [];
     let currentSort = { column: 'ca', order: 'desc' };
+    let lastViewedHash = '#/squad'; // Biến mới để biết quay về đâu
 
     // --- LẤY CÁC PHẦN TỬ GIAO DIỆN ---
     const loginView = document.getElementById('loginView');
     const appView = document.getElementById('appView');
     const storyDetailView = document.getElementById('storyDetailView');
+    const playerDetailView = document.getElementById('playerDetailView');
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
     const mySquadTab = document.getElementById('mySquadTab');
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentForm = document.getElementById('commentForm');
     const commentContent = document.getElementById('commentContent');
     const commentList = document.getElementById('commentList');
+    const allMainViews = [loginView, appView, storyDetailView, playerDetailView];
 
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
@@ -133,25 +136,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const path = location.hash.slice(2).split('/');
         const currentRoute = path[0] || 'squad';
         const param = path[1];
+
         if (!token) {
-            showLoginView();
+            showView(loginView);
             return;
         }
-        showAppView();
-        squadViewContainer.style.display = 'none';
-        forumView.style.display = 'none';
-        storyDetailView.style.display = 'none';
+        
+        // Mặc định hiển thị appView, các hàm con sẽ xử lý các view chi tiết
+        showView(appView);
+
         switch (currentRoute) {
             case 'squad':
                 showSquadView();
+                lastViewedHash = '#/squad';
                 break;
             case 'forum':
                 await showForumView();
+                lastViewedHash = '#/forum';
                 break;
             case 'story':
-                if (param) {
-                    await handleViewStoryDetail(param);
-                }
+                if (param) await handleViewStoryDetail(param);
+                break;
+            case 'player':
+                if (param) await handleViewPlayerDetail(param);
                 break;
             default:
                 location.hash = '#/squad';
@@ -177,13 +184,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('logoutBtn').addEventListener('click', handleLogout);
     };
 
+    const showView = (viewToShow) => {
+        allMainViews.forEach(view => view.style.display = 'none');
+        viewToShow.style.display = 'block';
+    };
+
     const showSquadView = () => {
         squadViewContainer.style.display = 'block';
+        forumView.style.display = 'none';
         mySquadTab.classList.add('active');
         forumTab.classList.remove('active');
     };
 
     const showForumView = async () => {
+        squadViewContainer.style.display = 'none';
         forumView.style.display = 'block';
         mySquadTab.classList.remove('active');
         forumTab.classList.add('active');
@@ -350,6 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleBackToForum = () => { location.hash = '#/forum'; };
+    const handleBackClick = () => {
+        location.hash = lastViewedHash;
+    };
 
     const handleEditStoryClick = () => {
         editStoryTitleInput.value = detailStoryTitle.innerText;
@@ -412,34 +429,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.renderTable = (data, tableElement = playerTable) => {
-        if (!data || data.length === 0) {
-            tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
-            return;
-        }
-        tableElement.innerHTML = data.map(player => `
-            <tr>
-                <td>${player.dorsal || '-'}</td>
-                <td>
-                    <div>
-                        <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
-                        <span class="player-name">${player.name}</span>
-                    </div>
-                    <span class="player-position">${player.position}</span>
-                </td>
-                <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
-                <td>${player.age}</td>
-                <td>${player.morale}</td>
-                <td>${player.personality}</td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
-                <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
-                <td>${player.matches}</td>
-                <td>${player.goals} / ${player.assists}</td>
-                <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
-            </tr>
-        `).join('');
-    };
+    if (!data || data.length === 0) {
+        tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
+        return;
+    }
+    tableElement.innerHTML = data.map(player => `
+        <tr data-player-id="${player.id}" style="cursor: pointer;">
+            <td>${player.dorsal || '-'}</td>
+            <td>
+                <div>
+                    <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
+                    <a href="#/player/${player.id}" class="player-name-link">${player.name}</a>
+                </div>
+                <span class="player-position">${player.position}</span>
+            </td>
+            <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
+            <td>${player.age}</td>
+            <td>${player.morale}</td>
+            <td>${player.personality}</td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
+            <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
+            <td>${player.matches}</td>
+            <td>${player.goals} / ${player.assists}</td>
+            <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
+        </tr>
+    `).join('');
+};
     
     const updateSidebar = (data) => {
         if (!data || data.length === 0) {
@@ -475,6 +492,49 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoginView();
         }
     };
+
+    // --- LOGIC MỚI: XEM CHI TIẾT CẦU THỦ ---
+    const handleViewPlayerDetail = async (playerId) => {
+        const player = await apiCall(`/players/${playerId}`);
+        if(player) {
+            renderPlayerDetail(player);
+            showView(playerDetailView);
+        }
+    };
+
+    const renderPlayerDetail = (player) => {
+        // Điền thông tin cơ bản
+        document.getElementById('playerName').innerText = player.name;
+        document.getElementById('playerPosition').innerText = player.position;
+        document.getElementById('playerCA').innerText = player.ca;
+        document.getElementById('playerPA').innerText = player.pa;
+        document.getElementById('playerAge').innerText = player.age;
+        document.getElementById('playerValue').innerText = player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A';
+        document.getElementById('playerPersonality').innerText = player.personality;
+        document.getElementById('playerHeight').innerText = `${player.height || '?'} cm`;
+        document.getElementById('playerWeight').innerText = `${player.weight || '?'} kg`;
+        document.getElementById('playerRightFoot').innerText = player.rightFoot;
+        document.getElementById('playerLeftFoot').innerText = player.leftFoot;
+        
+        // Render các cột chỉ số
+        const technicalAttrs = { Corners: player.corners, Crossing: player.crossing, Dribbling: player.dribbling, Finishing: player.finishing, "First Touch": player.firstTouch, "Free Kick": player.freeKick, Heading: player.heading, "Long Shots": player.longShots, "Long Throws": player.longThrows, Marking: player.marking, Passing: player.passing, "Penalty Taking": player.penalty, Tackling: player.tackling, Technique: player.technique };
+        const mentalAttrs = { Aggression: player.aggression, Anticipation: player.anticipation, Bravery: player.bravery, Composure: player.composure, Concentration: player.concentration, Decisions: player.decisions, Determination: player.determination, Flair: player.flair, Leadership: player.leadership, "Off The Ball": player.offTheBall, Positioning: player.positioning, Teamwork: player.teamwork, Vision: player.vision, "Work Rate": player.workRate };
+        const physicalAttrs = { Acceleration: player.acceleration, Agility: player.agility, Balance: player.balance, "Jumping Reach": player.jumping, "Natural Fitness": player.naturalFit, Pace: player.pace, Stamina: player.stamina, Strength: player.strength };
+
+        renderAttributeList('technical-attrs', technicalAttrs);
+        renderAttributeList('mental-attrs', mentalAttrs);
+        renderAttributeList('physical-attrs', physicalAttrs);
+    };
+
+    const renderAttributeList = (containerId, attributes) => {
+        const container = document.getElementById(containerId);
+        container.innerHTML = Object.entries(attributes).map(([name, value]) => `
+            <div class="attribute-row">
+                <span>${name}</span>
+                <span class="attribute-value" style="background-color: ${getAttributeColor(value)}">${value || 0}</span>
+            </div>
+        `).join('');
+    };
         
     // --- GẮN CÁC EVENT LISTENERS ---
     loginForm.addEventListener('submit', handleLogin);
@@ -491,6 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     backToForumBtn.addEventListener('click', handleBackToForum);
+    document.getElementById('backBtn').addEventListener('click', handleBackClick);
     
     editStoryBtn.addEventListener('click', handleEditStoryClick);
     cancelEditBtn.addEventListener('click', handleCancelEdit);

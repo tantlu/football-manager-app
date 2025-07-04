@@ -172,3 +172,16 @@ body {
 #storyDisplay {
     white-space: pre-wrap;
 }
+
+.attribute-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 14px;
+}
+.attribute-value {
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: white;
+}
