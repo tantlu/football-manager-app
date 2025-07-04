@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
-    const API_URL = 'http://localhost:3001/api'; // Địa chỉ backend của bạn
+    const API_URL = 'https://football-manager-app.onrender.com/api'; // Địa chỉ backend của bạn
 
     let token = null;
     let seasons = [];
