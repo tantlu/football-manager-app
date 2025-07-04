@@ -15,6 +15,7 @@ model User {
   password  String
   createdAt DateTime @default(now()) @map("created_at")
   seasons   Season[]
+  comments Comment[]
   @@map("users")
 }
 
@@ -25,6 +26,7 @@ model Season {
   user        User     @relation(fields: [userId], references: [id])
   userId      Int      @map("user_id")
   players     Player[]
+  story CareerStory?
   @@map("seasons")
 }
 
@@ -50,4 +52,39 @@ model Player {
   dorsal     Int?
   season     Season  @relation(fields: [seasonId], references: [id])
   @@map("players")
+}
+
+// Bảng mới để lưu bài viết/câu chuyện cho mỗi mùa giải
+model CareerStory {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text // Kiểu Text để không giới hạn số lượng từ
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Quan hệ: Mỗi câu chuyện thuộc về một mùa giải duy nhất
+  season    Season   @relation(fields: [seasonId], references: [id])
+  seasonId  Int      @unique @map("season_id") // unique: mỗi mùa giải chỉ có 1 câu chuyện
+
+  // Quan hệ: Mỗi câu chuyện có nhiều bình luận
+  comments  Comment[]
+
+  @@map("career_stories")
+}
+
+// Bảng mới để lưu các bình luận
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Quan hệ: Mỗi bình luận thuộc về một câu chuyện
+  story     CareerStory @relation(fields: [storyId], references: [id])
+  storyId   Int         @map("story_id")
+
+  // Quan hệ: Mỗi bình luận được viết bởi một người dùng
+  author    User        @relation(fields: [authorId], references: [id])
+  authorId  Int         @map("author_id")
+
+  @@map("comments")
 }

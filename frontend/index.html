@@ -48,6 +48,15 @@
     </div>
 
     <div id="appView" class="container-fluid mt-4" style="display: none;">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" id="mySquadTab">My Squad</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" id="forumTab">Career Forum</a>
+            </li>
+        </ul>
+
         <div class="row">
             <div class="col-lg-2">
                 <div class="sidebar">
@@ -70,45 +79,69 @@
             </div>
             
             <div class="col-lg-10">
-                <div class="main-content-card">
-                    <div class="card-header-flex">
-                        <h1 id="squadTitle" class="team-title">SQUAD VIEW</h1>
-                        <div class="filter-container">
-                            <i class="bi bi-search"></i>
-                            <input type="text" id="filterInput" class="form-control" placeholder="Filter Player">
+                <div id="squadViewContainer">
+                    <div class="main-content-card">
+                        <div class="card-header-flex">
+                            <h1 id="squadTitle" class="team-title">SQUAD VIEW</h1>
+                            <div class="filter-container">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="filterInput" class="form-control" placeholder="Filter Player">
+                            </div>
                         </div>
-                    </div>
-                    <div id="uploadArea" class="mb-3 p-3 border rounded bg-light" style="display: none;">
-                        <label for="fileInput" class="form-label"><b>Upload Squad File</b> for the selected season:</label>
-                        <div class="input-group">
-                            <input type="file" id="fileInput" class="form-control" accept=".html" />
-                            <button id="uploadBtn" class="btn btn-primary">Upload</button>
-                            <button id="deleteSquadBtn" class="btn btn-danger">Delete Squad</button>
+                        <div id="uploadArea" class="mb-3 p-3 border rounded bg-light" style="display: none;">
+                            <label for="fileInput" class="form-label"><b>Upload Squad File</b> for the selected season:</label>
+                            <div class="input-group">
+                                <input type="file" id="fileInput" class="form-control" accept=".html" />
+                                <button id="uploadBtn" class="btn btn-primary">Upload</button>
+                                <button id="deleteSquadBtn" class="btn btn-danger">Delete Squad</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle text-start">
+                                 <thead>
+                                    <tr>
+                                        <th onclick="sortTable('dorsal')">No.</th>
+                                        <th onclick="sortTable('name')">Name</th>
+                                        <th onclick="sortTable('ca')">CA</th>
+                                        <th onclick="sortTable('age')">Age</th>
+                                        <th onclick="sortTable('morale')">Morale</th>
+                                        <th onclick="sortTable('personality')">Personality</th>
+                                        <th onclick="sortTable('workRate')">Wor</th>
+                                        <th onclick="sortTable('technique')">Tec</th>
+                                        <th onclick="sortTable('pace')">Pac</th>
+                                        <th onclick="sortTable('value')">Est. Value</th>
+                                        <th onclick="sortTable('matches')">Parties</th>
+                                        <th onclick="sortTable('goals')">G/A</th>
+                                        <th onclick="sortTable('avgRating')">Avg. Rat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="playerTable"></tbody>
+                            </table>
                         </div>
                     </div>
                     
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle text-start">
-                             <thead>
-                                <tr>
-                                    <th onclick="sortTable('dorsal')">No.</th>
-                                    <th onclick="sortTable('name')">Name</th>
-                                    <th onclick="sortTable('ca')">CA</th>
-                                    <th onclick="sortTable('age')">Age</th>
-                                    <th onclick="sortTable('morale')">Morale</th>
-                                    <th onclick="sortTable('personality')">Personality</th>
-                                    <th onclick="sortTable('workRate')">Wor</th>
-                                    <th onclick="sortTable('technique')">Tec</th>
-                                    <th onclick="sortTable('pace')">Pac</th>
-                                    <th onclick="sortTable('value')">Est. Value</th>
-                                    <th onclick="sortTable('matches')">Parties</th>
-                                    <th onclick="sortTable('goals')">G/A</th>
-                                    <th onclick="sortTable('avgRating')">Avg. Rat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="playerTable"></tbody>
-                        </table>
+                    <div id="storyContainer" class="main-content-card mt-4" style="display: none;">
+                        <h4 id="storyHeader">My Story for Season...</h4>
+                        <div id="storyDisplay" class="mb-3 p-3 border rounded bg-light">
+                            </div>
+                        <div id="storyEditor">
+                             <div class="mb-3">
+                                <label for="storyTitleInput" class="form-label">Story Title</label>
+                                <input type="text" class="form-control" id="storyTitleInput" placeholder="A Glorious Season...">
+                            </div>
+                            <div class="mb-3">
+                                <label for="storyContentTextarea" class="form-label">Your Story</label>
+                                <textarea class="form-control" id="storyContentTextarea" rows="10" placeholder="It all started when..."></textarea>
+                            </div>
+                            <button id="saveStoryBtn" class="btn btn-success">Save Story</button>
+                        </div>
                     </div>
+                </div>
+
+                <div id="forumView" style="display: none;">
+                    <h2 class="mb-3">Career Stories Feed</h2>
+                    <div id="storiesFeed">
+                        </div>
                 </div>
             </div>
         </div>

@@ -139,3 +139,36 @@ body {
     font-weight: bold;
     float: right;
 }
+.nav-tabs .nav-link {
+    cursor: pointer;
+}
+
+.story-card {
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.story-card .story-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.story-card .story-meta {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 15px;
+}
+
+.story-card .story-content {
+    white-space: pre-wrap; /* Giữ lại các định dạng xuống dòng */
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+#storyDisplay {
+    white-space: pre-wrap;
+}

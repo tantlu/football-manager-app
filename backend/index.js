@@ -18,10 +18,12 @@ app.use(express.json()); // Giúp server đọc được dữ liệu JSON từ r
 const authRoutes = require('./routes/auth');
 const seasonRoutes = require('./routes/seasons');
 const squadRoutes = require('./routes/squads');
+const storyRoutes = require('./routes/stories');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/seasons', seasonRoutes);
 app.use('/api/squads', squadRoutes);
+app.use('/api/stories', storyRoutes);
 
 
 // Route thử nghiệm

@@ -25,6 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInfoDiv = document.getElementById('userInfo');
     const filterInput = document.getElementById('filterInput');
     const deleteSquadBtn = document.getElementById('deleteSquadBtn');
+    // Các biến mới cho tính năng story/forum
+    const mySquadTab = document.getElementById('mySquadTab');
+    const forumTab = document.getElementById('forumTab');
+    const squadViewContainer = document.getElementById('squadViewContainer');
+    const forumView = document.getElementById('forumView');
+    const storiesFeed = document.getElementById('storiesFeed');
+    const storyContainer = document.getElementById('storyContainer');
+    const storyHeader = document.getElementById('storyHeader');
+    const storyDisplay = document.getElementById('storyDisplay');
+    const storyEditor = document.getElementById('storyEditor');
+    const storyTitleInput = document.getElementById('storyTitleInput');
+    const storyContentTextarea = document.getElementById('storyContentTextarea');
+    const saveStoryBtn = document.getElementById('saveStoryBtn');
 
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
@@ -32,21 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
             method,
             headers: {}
         };
-        // Chỉ thêm Authorization header nếu token tồn tại
         if (token) {
             options.headers['Authorization'] = `Bearer ${token}`;
         }
-
         if (body) {
             if (body instanceof FormData) {
-                // Để trình duyệt tự đặt Content-Type cho FormData
                 options.body = body;
             } else {
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(body);
             }
         }
-
         try {
             const response = await fetch(`${API_URL}${endpoint}`, options);
             if (!response.ok) {
@@ -72,7 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
-
         const result = await apiCall('/auth/login', 'POST', { username, password });
         if (result && result.token) {
             token = result.token;
@@ -86,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const username = document.getElementById('registerUsername').value;
         const password = document.getElementById('registerPassword').value;
-
         const result = await apiCall('/auth/register', 'POST', { username, password });
         if (result) {
             alert(result.message + ". Please login now.");
@@ -102,21 +109,40 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginView();
     };
 
+    // --- LOGIC CHUYỂN TAB ---
+    const showSquadView = () => {
+        squadViewContainer.style.display = 'block';
+        forumView.style.display = 'none';
+        mySquadTab.classList.add('active');
+        forumTab.classList.remove('active');
+    };
+
+    const showForumView = () => {
+        squadViewContainer.style.display = 'none';
+        forumView.style.display = 'block';
+        mySquadTab.classList.remove('active');
+        forumTab.classList.add('active');
+        fetchPublicFeed();
+    };
+
     // --- LOGIC MÙA GIẢI & ĐỘI HÌNH ---
     const fetchSeasons = async () => {
         seasons = await apiCall('/seasons');
-        if (seasons) {
-            renderSeasonSelector();
-            if (seasons.length > 0) {
-                currentSeasonId = seasons[0].id;
-                seasonSelector.value = currentSeasonId;
-                fetchSquadForSeason(currentSeasonId);
-                uploadArea.style.display = 'block';
-            } else {
-                uploadArea.style.display = 'block'; // Hiển thị upload area ngay cả khi chưa có mùa giải
-                playerTable.innerHTML = `<tr><td colspan="13" class="text-center">No seasons found. Please create a new season.</td></tr>`;
-                squadTitle.innerText = 'CREATE A SEASON TO START';
-            }
+        if (!seasons) return;
+
+        renderSeasonSelector();
+        if (seasons.length > 0) {
+            currentSeasonId = seasons[0].id;
+            seasonSelector.value = currentSeasonId;
+            fetchSquadForSeason(currentSeasonId);
+            uploadArea.style.display = 'block';
+            storyContainer.style.display = 'block';
+        } else {
+            // Xử lý khi không có mùa giải nào
+            uploadArea.style.display = 'block';
+            storyContainer.style.display = 'none';
+            playerTable.innerHTML = `<tr><td colspan="13" class="text-center">No seasons found. Please create a new season.</td></tr>`;
+            squadTitle.innerText = 'CREATE A SEASON TO START';
         }
     };
     
@@ -126,8 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSeason = await apiCall('/seasons', 'POST', { seasonName });
             if(newSeason) {
                 await fetchSeasons();
-                seasonSelector.value = newSeason.id; // Tự động chọn mùa giải vừa tạo
-                fetchSquadForSeason(newSeason.id);
+                seasonSelector.value = newSeason.id;
+                await fetchSquadForSeason(newSeason.id);
             }
         }
     };
@@ -136,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!seasonId) {
             playerTable.innerHTML = `<tr><td colspan="13" class="text-center">Please select a season.</td></tr>`;
             squadTitle.innerText = 'SELECT A SEASON';
+            storyContainer.style.display = 'none';
             return;
         };
         currentSeasonId = seasonId;
@@ -145,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         playersData = await apiCall(`/squads/${seasonId}`);
         renderTable(playersData || []);
         updateSidebar(playersData || []);
+        await fetchStoryForSeason(seasonId);
     };
 
     const handleUpload = async () => {
@@ -156,42 +184,102 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please create and select a season first.');
             return;
         }
-
         const formData = new FormData();
         formData.append('squadFile', fileInput.files[0]);
 
         uploadBtn.disabled = true;
         uploadBtn.innerText = 'Uploading...';
-
         const result = await apiCall(`/squads/upload/${currentSeasonId}`, 'POST', formData);
         if(result) {
             alert(result.message);
-            fileInput.value = ''; // Reset file input
-            fetchSquadForSeason(currentSeasonId); // Refresh table
+            fileInput.value = '';
+            fetchSquadForSeason(currentSeasonId);
         }
-
         uploadBtn.disabled = false;
         uploadBtn.innerText = 'Upload';
     };
+
     const handleDeleteSquad = async () => {
-    if (!currentSeasonId) {
-        alert('Please select a season to delete.');
-        return;
-    }
-
-    const season = seasons.find(s => s.id == currentSeasonId);
-    const confirmation = confirm(`Are you sure you want to delete all squad data for season "${season.seasonName}"?\nThis action cannot be undone.`);
-
-    if (confirmation) {
-        const result = await apiCall(`/squads/${currentSeasonId}`, 'DELETE');
-        if (result) {
-            alert(result.message);
-            // Tải lại bảng để hiển thị trạng thái trống
-            fetchSquadForSeason(currentSeasonId);
+        if (!currentSeasonId) {
+            alert('Please select a season to delete.');
+            return;
         }
-    }
-};
+        const season = seasons.find(s => s.id == currentSeasonId);
+        const confirmation = confirm(`Are you sure you want to delete all squad data for season "${season.seasonName}"?\nThis action cannot be undone.`);
 
+        if (confirmation) {
+            const result = await apiCall(`/squads/${currentSeasonId}`, 'DELETE');
+            if (result) {
+                alert(result.message);
+                fetchSquadForSeason(currentSeasonId);
+            }
+        }
+    };
+
+    // --- LOGIC STORY/FORUM ---
+    const fetchStoryForSeason = async (seasonId) => {
+        if (!seasonId) {
+            storyContainer.style.display = 'none';
+            return;
+        }
+        
+        const season = seasons.find(s => s.id == seasonId);
+        storyHeader.innerText = `My Story for ${season.seasonName}`;
+
+        const story = await apiCall(`/stories/${seasonId}`);
+        if(story) {
+            storyTitleInput.value = story.title;
+            storyContentTextarea.value = story.content;
+            storyDisplay.innerHTML = `<h4>${story.title}</h4><p>${story.content}</p>`;
+        } else {
+            storyTitleInput.value = '';
+            storyContentTextarea.value = '';
+            storyDisplay.innerHTML = `<p class="text-muted">You haven't written a story for this season yet.</p>`;
+        }
+        storyContainer.style.display = 'block';
+    };
+
+    const handleSaveStory = async () => {
+        const title = storyTitleInput.value;
+        const content = storyContentTextarea.value;
+        if (!currentSeasonId || !title || !content) {
+            alert("Please select a season and provide both a title and content.");
+            return;
+        }
+        saveStoryBtn.disabled = true;
+        saveStoryBtn.innerText = 'Saving...';
+        const result = await apiCall(`/stories/${currentSeasonId}`, 'POST', { title, content });
+        if(result) {
+            alert('Story saved!');
+            storyDisplay.innerHTML = `<h4>${result.title}</h4><p>${result.content}</p>`;
+        }
+        saveStoryBtn.disabled = false;
+        saveStoryBtn.innerText = 'Save Story';
+    };
+
+    const fetchPublicFeed = async () => {
+        storiesFeed.innerHTML = '<p>Loading stories...</p>';
+        const publicStories = await apiCall('/stories/public/feed');
+        if (publicStories) {
+            renderPublicFeed(publicStories);
+        }
+    };
+
+    const renderPublicFeed = (stories) => {
+        if (!stories || stories.length === 0) {
+            storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
+            return;
+        }
+        storiesFeed.innerHTML = stories.map(story => `
+            <div class="story-card">
+                <h3 class="story-title">${story.title}</h3>
+                <p class="story-meta">
+                    By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
+                </p>
+                <p class="story-content">${story.content.substring(0, 400)}...</p>
+            </div>
+        `).join('');
+    };
 
     // --- CÁC HÀM HIỂN THỊ & CẬP NHẬT GIAO DIỆN ---
     const showLoginView = () => {
@@ -252,7 +340,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const topScorers = [...data].sort((a, b) => b.goals - a.goals).slice(0, 3);
         document.getElementById("topScorers").innerHTML = `<table class="sidebar-table">${topScorers.map(p => `<tr><td>${p.name}</td><td class="text-end"><strong>${p.goals}</strong></td></tr>`).join('')}</table>`;
-
         const topPlayers = [...data].sort((a, b) => b.ca - a.ca).slice(0, 3);
         document.getElementById("topPlayers").innerHTML = `<table class="sidebar-table">${topPlayers.map(p => `<tr><td>${p.name}</td><td><span class="rating-value">${p.ca}</span></td></tr>`).join('')}</table>`;
     };
@@ -274,27 +361,30 @@ document.addEventListener('DOMContentLoaded', () => {
         token = localStorage.getItem('authToken');
         if (token) {
             showAppView();
+            showSquadView();
             await fetchSeasons();
         } else {
             showLoginView();
         }
     };
-    
-    
-    // Gắn các Event Listeners
+        
+    // --- GẮN CÁC EVENT LISTENERS ---
     loginForm.addEventListener('submit', handleLogin);
     registerForm.addEventListener('submit', handleRegister);
     createSeasonBtn.addEventListener('click', handleCreateSeason);
     seasonSelector.addEventListener('change', (e) => fetchSquadForSeason(e.target.value));
     uploadBtn.addEventListener('click', handleUpload);
     deleteSquadBtn.addEventListener('click', handleDeleteSquad);
+    mySquadTab.addEventListener('click', (e) => { e.preventDefault(); showSquadView(); });
+    forumTab.addEventListener('click', (e) => { e.preventDefault(); showForumView(); });
+    saveStoryBtn.addEventListener('click', handleSaveStory);
     filterInput.addEventListener('keyup', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
         renderTable(filtered);
     });
 
-    // Các hàm tiện ích cũ (giữ lại vì renderTable cần)
+    // --- CÁC HÀM TIỆN ÍCH ---
     window.getCaColor = (value) => {
         if (value >= 180) return '#28a745'; if (value >= 160) return '#d4edda'; if (value >= 140) return '#cce5ff';
         if (value >= 120) return '#fff3cd'; if (value > 0) return '#f8d7da'; return '#f8f9fa';

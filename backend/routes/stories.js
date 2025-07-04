@@ -1,0 +1,69 @@
+// File: backend/routes/stories.js
+
+const express = require('express');
+const { PrismaClient } = require('@prisma/client');
+const authMiddleware = require('../middleware/auth');
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// API lấy câu chuyện của một mùa giải
+router.get('/:seasonId', authMiddleware, async (req, res) => {
+    const { seasonId } = req.params;
+    const story = await prisma.careerStory.findUnique({
+        where: { seasonId: parseInt(seasonId) }
+    });
+    res.json(story);
+});
+
+// API tạo/cập nhật câu chuyện cho một mùa giải
+router.post('/:seasonId', authMiddleware, async (req, res) => {
+    const { seasonId } = req.params;
+    const { title, content } = req.body;
+    const userId = req.userData.userId;
+
+    // Kiểm tra xem mùa giải có thuộc về user không
+    const season = await prisma.season.findFirst({
+        where: { id: parseInt(seasonId), userId: userId }
+    });
+    if (!season) {
+        return res.status(403).json({ message: "Forbidden" });
+    }
+
+    // Dùng upsert: nếu đã có story thì update, chưa có thì tạo mới
+    const story = await prisma.careerStory.upsert({
+        where: { seasonId: parseInt(seasonId) },
+        update: { title, content },
+        create: { title, content, seasonId: parseInt(seasonId) }
+    });
+
+    res.json(story);
+});
+
+// API mới: Lấy tất cả các bài viết để hiển thị công khai
+router.get('/public/feed', async (req, res) => {
+    try {
+        const stories = await prisma.careerStory.findMany({
+            orderBy: {
+                updatedAt: 'desc', // Sắp xếp theo bài mới nhất
+            },
+            include: {
+                season: {
+                    select: {
+                        seasonName: true,
+                        user: {
+                            select: {
+                                username: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        res.json(stories);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch public feed.' });
+    }
+});
+
+module.exports = router;
