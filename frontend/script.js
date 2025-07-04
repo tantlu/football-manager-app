@@ -1,14 +1,13 @@
-// File: script.js
+// File: frontend/script.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
     // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
     const API_URL = 'https://football-manager-app.onrender.com/api';
 
     let token = null;
     let seasons = [];
     let currentSeasonId = null;
-    let currentStoryId = null; // Biến mới để lưu ID của story đang xem
+    let currentStoryId = null;
     let playersData = [];
     let currentSort = { column: 'ca', order: 'desc' };
 
@@ -16,27 +15,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginView = document.getElementById('loginView');
     const appView = document.getElementById('appView');
     const storyDetailView = document.getElementById('storyDetailView');
-    
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
-    
     const mySquadTab = document.getElementById('mySquadTab');
     const forumTab = document.getElementById('forumTab');
-    
     const userInfoDiv = document.getElementById('userInfo');
     const seasonSelector = document.getElementById('seasonSelector');
     const createSeasonBtn = document.getElementById('createSeasonBtn');
-    
     const squadViewContainer = document.getElementById('squadViewContainer');
     const squadTitle = document.getElementById('squadTitle');
     const filterInput = document.getElementById('filterInput');
     const playerTable = document.getElementById('playerTable');
-    
     const uploadArea = document.getElementById('uploadArea');
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
     const deleteSquadBtn = document.getElementById('deleteSquadBtn');
-    
     const storyContainer = document.getElementById('storyContainer');
     const storyHeader = document.getElementById('storyHeader');
     const storyDisplay = document.getElementById('storyDisplay');
@@ -44,10 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyTitleInput = document.getElementById('storyTitleInput');
     const storyContentTextarea = document.getElementById('storyContentTextarea');
     const saveStoryBtn = document.getElementById('saveStoryBtn');
-
     const forumView = document.getElementById('forumView');
     const storiesFeed = document.getElementById('storiesFeed');
-
     const backToForumBtn = document.getElementById('backToForumBtn');
     const detailStoryTitle = document.getElementById('detailStoryTitle');
     const detailStoryMeta = document.getElementById('detailStoryMeta');
@@ -101,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-
     // --- LOGIC XÁC THỰC ---
     const handleLogin = async (event) => {
         event.preventDefault();
@@ -112,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             token = result.token;
             localStorage.setItem('authToken', token);
             localStorage.setItem('username', username);
-            localStorage.setItem('userId', result.userId); // <-- LƯU USER ID
+            localStorage.setItem('userId', result.userId);
             initializeApp();
         }
     };
@@ -133,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
         token = null;
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
-        location.hash = ''; // Xóa hash để quay về trang đăng nhập
         localStorage.removeItem('userId');
+        location.hash = '';
         showLoginView();
     };
 
@@ -143,19 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const path = location.hash.slice(2).split('/');
         const currentRoute = path[0] || 'squad';
         const param = path[1];
-
         if (!token) {
             showLoginView();
             return;
         }
-
         showAppView();
-        
-        // Ẩn tất cả các view chính trước khi hiển thị view mới
         squadViewContainer.style.display = 'none';
         forumView.style.display = 'none';
         storyDetailView.style.display = 'none';
-
         switch (currentRoute) {
             case 'squad':
                 showSquadView();
@@ -175,7 +160,23 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- CÁC HÀM HIỂN THỊ VIEW ---
-    
+    const showLoginView = () => {
+        loginView.style.display = 'block';
+        appView.style.display = 'none';
+        storyDetailView.style.display = 'none';
+    };
+
+    const showAppView = () => {
+        loginView.style.display = 'none';
+        appView.style.display = 'block';
+        const username = localStorage.getItem('username');
+        userInfoDiv.innerHTML = `
+            <p>Welcome, <strong>${username}</strong></p>
+            <button id="logoutBtn" class="btn btn-sm btn-danger w-100">Logout</button>
+        `;
+        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    };
+
     const showSquadView = () => {
         squadViewContainer.style.display = 'block';
         mySquadTab.classList.add('active');
@@ -189,12 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchPublicFeed();
     };
 
-
     // --- LOGIC MÙA GIẢI & ĐỘI HÌNH ---
     const fetchSeasons = async () => {
         seasons = await apiCall('/seasons');
         if (!seasons) return;
-
         renderSeasonSelector();
         if (seasons.length > 0) {
             currentSeasonId = seasonSelector.value || seasons[0].id;
@@ -216,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(newSeason) {
                 await fetchSeasons();
                 seasonSelector.value = newSeason.id;
-                location.hash = '#/squad'; // Đảm bảo đang ở squad view
+                location.hash = '#/squad';
                 await fetchSquadForSeason(newSeason.id);
             }
         }
@@ -232,19 +231,77 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSeasonId = seasonId;
         const season = seasons.find(s => s.id == seasonId);
         squadTitle.innerText = season ? `SQUAD VIEW - ${season.seasonName}` : 'SQUAD VIEW';
-        
         playersData = await apiCall(`/squads/${seasonId}`);
         renderTable(playersData || [], playerTable);
         updateSidebar(playersData || []);
         await fetchStoryForSeason(seasonId);
     };
 
-    const handleUpload = async () => { /* ... giữ nguyên ... */ };
-    const handleDeleteSquad = async () => { /* ... giữ nguyên ... */ };
+    const handleUpload = async () => {
+        if (!fileInput.files[0]) return alert('Please select a file to upload.');
+        if (!currentSeasonId) return alert('Please create and select a season first.');
+        const formData = new FormData();
+        formData.append('squadFile', fileInput.files[0]);
+        uploadBtn.disabled = true;
+        uploadBtn.innerText = 'Uploading...';
+        const result = await apiCall(`/squads/upload/${currentSeasonId}`, 'POST', formData);
+        if(result) {
+            alert(result.message);
+            fileInput.value = '';
+            fetchSquadForSeason(currentSeasonId);
+        }
+        uploadBtn.disabled = false;
+        uploadBtn.innerText = 'Upload';
+    };
+
+    const handleDeleteSquad = async () => {
+        if (!currentSeasonId) return alert('Please select a season to delete.');
+        const season = seasons.find(s => s.id == currentSeasonId);
+        const confirmation = confirm(`Are you sure you want to delete all squad data for season "${season.seasonName}"?\nThis action cannot be undone.`);
+        if (confirmation) {
+            const result = await apiCall(`/squads/${currentSeasonId}`, 'DELETE');
+            if (result) {
+                alert(result.message);
+                fetchSquadForSeason(currentSeasonId);
+            }
+        }
+    };
 
     // --- LOGIC STORY/FORUM ---
-    const fetchStoryForSeason = async (seasonId) => { /* ... giữ nguyên ... */ };
-    const handleSaveStory = async () => { /* ... giữ nguyên ... */ };
+    const fetchStoryForSeason = async (seasonId) => {
+        if (!seasonId) {
+            storyContainer.style.display = 'none';
+            return;
+        }
+        const season = seasons.find(s => s.id == seasonId);
+        storyHeader.innerText = `My Story for ${season.seasonName}`;
+        const story = await apiCall(`/stories/${seasonId}`);
+        if(story) {
+            storyTitleInput.value = story.title;
+            storyContentTextarea.value = story.content;
+            storyDisplay.innerHTML = `<h4>${story.title}</h4><p>${story.content}</p>`;
+        } else {
+            storyTitleInput.value = '';
+            storyContentTextarea.value = '';
+            storyDisplay.innerHTML = `<p class="text-muted">You haven't written a story for this season yet.</p>`;
+        }
+        storyContainer.style.display = 'block';
+    };
+
+    const handleSaveStory = async () => {
+        const title = storyTitleInput.value;
+        const content = storyContentTextarea.value;
+        if (!currentSeasonId || !title || !content) return alert("Please select a season and provide both a title and content.");
+        saveStoryBtn.disabled = true;
+        saveStoryBtn.innerText = 'Saving...';
+        const result = await apiCall(`/stories/${currentSeasonId}`, 'POST', { title, content });
+        if(result) {
+            alert('Story saved!');
+            storyDisplay.innerHTML = `<h4>${result.title}</h4><p>${result.content}</p>`;
+        }
+        saveStoryBtn.disabled = false;
+        saveStoryBtn.innerText = 'Save Story';
+    };
 
     const fetchPublicFeed = async () => {
         storiesFeed.innerHTML = '<p>Loading stories...</p>';
@@ -259,14 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
             storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
             return;
         }
-        // SỬA LỖI: Dùng thẻ <a> với href đúng để routing hoạt động
         storiesFeed.innerHTML = stories.map(story => `
             <a href="#/story/${story.seasonId}" class="story-card-link text-decoration-none">
                 <div class="story-card">
                     <h3 class="story-title">${story.title}</h3>
-                    <p class="story-meta">
-                        By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
-                    </p>
+                    <p class="story-meta">By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}</p>
                     <p class="story-content">${story.content.substring(0, 400)}...</p>
                 </div>
             </a>
@@ -276,51 +330,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleViewStoryDetail = async (seasonId) => {
         const data = await apiCall(`/stories/details/${seasonId}`);
         if (data) {
-            currentStoryId = data.story.id; // Lưu lại storyId hiện tại
+            currentStoryId = data.story.id;
             const loggedInUserId = localStorage.getItem('userId');
-            
             appView.style.display = 'none';
             storyDetailView.style.display = 'block';
-            
-            // Hiện/ẩn các phần tử
             detailStoryContent.style.display = 'block';
             detailStoryEditor.style.display = 'none';
-
-            // Điền dữ liệu story
             detailStoryTitle.innerText = data.story.title;
             detailStoryMeta.innerText = `By ${data.story.season.user.username} for season ${data.story.season.seasonName}`;
             detailStoryContent.innerText = data.story.content;
-            
-            // Kiểm tra quyền sở hữu để hiện nút Edit
             if (loggedInUserId && parseInt(loggedInUserId) === data.story.season.user.id) {
                 editStoryBtn.style.display = 'block';
             } else {
                 editStoryBtn.style.display = 'none';
             }
-            
-            // Tải và hiển thị bình luận
             await fetchComments(data.story.id);
-
-            // Render bảng cầu thủ
             renderTable(data.players, detailPlayerTable);
         }
     };
+
     const handleBackToForum = () => { location.hash = '#/forum'; };
 
-    // --- HÀM MỚI: CHỈNH SỬA BÀI VIẾT ---
     const handleEditStoryClick = () => {
-        // Lấy nội dung hiện tại để điền vào form editor
         editStoryTitleInput.value = detailStoryTitle.innerText;
         editStoryContentTextarea.value = detailStoryContent.innerText;
-
-        // Ẩn nội dung tĩnh, hiện form editor
         detailStoryContent.style.display = 'none';
         editStoryBtn.style.display = 'none';
         detailStoryEditor.style.display = 'block';
     };
 
     const handleCancelEdit = () => {
-        // Hiện lại nội dung tĩnh, ẩn form editor
         detailStoryContent.style.display = 'block';
         editStoryBtn.style.display = 'block';
         detailStoryEditor.style.display = 'none';
@@ -329,27 +368,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleSaveChanges = async () => {
         const title = editStoryTitleInput.value;
         const content = editStoryContentTextarea.value;
-
-        if (!currentStoryId || !title || !content) {
-            return alert('Title and content cannot be empty.');
-        }
-
+        if (!currentStoryId || !title || !content) return alert('Title and content cannot be empty.');
         const updatedStory = await apiCall(`/stories/${currentStoryId}`, 'PUT', { title, content });
         if(updatedStory) {
             alert('Story updated successfully!');
-            // Cập nhật lại giao diện với nội dung mới
             detailStoryTitle.innerText = updatedStory.title;
             detailStoryContent.innerText = updatedStory.content;
-            handleCancelEdit(); // Quay lại view xem bài viết
+            handleCancelEdit();
         }
     };
 
-    // --- HÀM MỚI: BÌNH LUẬN ---
     const fetchComments = async (storyId) => {
         const comments = await apiCall(`/comments/${storyId}`);
-        if (comments) {
-            renderComments(comments);
-        }
+        if (comments) renderComments(comments);
     };
 
     const renderComments = (comments) => {
@@ -360,9 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         commentList.innerHTML = comments.map(comment => `
             <div class="border-bottom pb-2 mb-2">
                 <p class="mb-1">${comment.content}</p>
-                <small class="text-muted">
-                    By <strong>${comment.author.username}</strong> on ${new Date(comment.createdAt).toLocaleString()}
-                </small>
+                <small class="text-muted">By <strong>${comment.author.username}</strong> on ${new Date(comment.createdAt).toLocaleString()}</small>
             </div>
         `).join('');
     };
@@ -371,65 +400,45 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const content = commentContent.value;
         if (!content || !currentStoryId) return;
-
         const newComment = await apiCall(`/comments/${currentStoryId}`, 'POST', { content });
         if (newComment) {
-            commentContent.value = ''; // Xóa nội dung trong textarea
-            fetchComments(currentStoryId); // Tải lại danh sách bình luận
+            commentContent.value = '';
+            fetchComments(currentStoryId);
         }
-    };
-
-    // --- CÁC HÀM HIỂN THỊ & CẬP NHẬT GIAO DIỆN ---
-    const showLoginView = () => {
-        loginView.style.display = 'block';
-        appView.style.display = 'none';
-        storyDetailView.style.display = 'none';
-    };
-
-    const showAppView = () => {
-        loginView.style.display = 'none';
-        appView.style.display = 'block';
-        const username = localStorage.getItem('username');
-        userInfoDiv.innerHTML = `
-            <p>Welcome, <strong>${username}</strong></p>
-            <button id="logoutBtn" class="btn btn-sm btn-danger w-100">Logout</button>
-        `;
-        document.getElementById('logoutBtn').addEventListener('click', handleLogout);
     };
 
     const renderSeasonSelector = () => {
         seasonSelector.innerHTML = seasons.map(s => `<option value="${s.id}">${s.seasonName}</option>`).join('');
     };
 
-    // Sửa lại hàm renderTable để nhận tham số là element của bảng
-window.renderTable = (data, tableElement = playerTable) => {
-    if (!data || data.length === 0) {
-        tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
-        return;
-    }
-    tableElement.innerHTML = data.map(player => `
-        <tr>
-            <td>${player.dorsal || '-'}</td>
-            <td>
-                <div>
-                    <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
-                    <span class="player-name">${player.name}</span>
-                </div>
-                <span class="player-position">${player.position}</span>
-            </td>
-            <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
-            <td>${player.age}</td>
-            <td>${player.morale}</td>
-            <td>${player.personality}</td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
-            <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
-            <td>${player.matches}</td>
-            <td>${player.goals} / ${player.assists}</td>
-            <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
-        </tr>
-    `).join('');
+    window.renderTable = (data, tableElement = playerTable) => {
+        if (!data || data.length === 0) {
+            tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
+            return;
+        }
+        tableElement.innerHTML = data.map(player => `
+            <tr>
+                <td>${player.dorsal || '-'}</td>
+                <td>
+                    <div>
+                        <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
+                        <span class="player-name">${player.name}</span>
+                    </div>
+                    <span class="player-position">${player.position}</span>
+                </td>
+                <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
+                <td>${player.age}</td>
+                <td>${player.morale}</td>
+                <td>${player.personality}</td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
+                <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
+                <td>${player.matches}</td>
+                <td>${player.goals} / ${player.assists}</td>
+                <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
+            </tr>
+        `).join('');
     };
     
     const updateSidebar = (data) => {
@@ -453,10 +462,9 @@ window.renderTable = (data, tableElement = playerTable) => {
             if (typeof valA === 'string') return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             return order === 'asc' ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
         });
-        renderTable(sorted);
+        renderTable(sorted, playerTable); // Chú ý: Sắp xếp chỉ áp dụng cho bảng chính
     };
 
-    // --- KHỞI TẠO ỨNG DỤNG ---
     const initializeApp = async () => {
         token = localStorage.getItem('authToken');
         if (token) {
@@ -483,6 +491,14 @@ window.renderTable = (data, tableElement = playerTable) => {
     });
     
     backToForumBtn.addEventListener('click', handleBackToForum);
+    
+    editStoryBtn.addEventListener('click', handleEditStoryClick);
+    cancelEditBtn.addEventListener('click', handleCancelEdit);
+    saveChangesBtn.addEventListener('click', handleSaveChanges);
+    commentForm.addEventListener('submit', handlePostComment);
+
+    window.addEventListener('hashchange', router);
+
     // --- CÁC HÀM TIỆN ÍCH ---
     window.getCaColor = (value) => {
         if (value >= 180) return '#28a745'; if (value >= 160) return '#d4edda'; if (value >= 140) return '#cce5ff';
@@ -500,21 +516,6 @@ window.renderTable = (data, tableElement = playerTable) => {
         const map = {"AFG":"af","ALB":"al","ALG":"dz","AND":"ad","ANG":"ao","ATG":"ag","ARG":"ar","ARM":"am","AUS":"au","AUT":"at","AZE":"az","BAH":"bs","BHR":"bh","BAN":"bd","BRB":"bb","BLR":"by","BEL":"be","BLZ":"bz","BEN":"bj","BTN":"bt","BOL":"bo","BIH":"ba","BOT":"bw","BRA":"br","BRU":"bn","BUL":"bg","BFA":"bf","BDI":"bi","CAM":"kh","CMR":"cm","CAN":"ca","CPV":"cv","CTA":"cf","CHA":"td","CHI":"cl","CHN":"cn","COL":"co","COM":"km","CGO":"cg","COD":"cd","CRC":"cr","CIV":"ci","CRO":"hr","CUB":"cu","CYP":"cy","CZE":"cz","DEN":"dk","DJI":"dj","DMA":"dm","DOM":"do","ECU":"ec","EGY":"eg","SLV":"sv","EQG":"gq","ERI":"er","EST":"ee","ETH":"et","FIJ":"fj","FIN":"fi","FRA":"fr","GAB":"ga","GAM":"gm","GEO":"ge","GER":"de","GHA":"gh","GRE":"gr","GRN":"gd","GUA":"gt","GUI":"gn","GNB":"gw","GUY":"gy","HAI":"ht","HON":"hn","HKG":"hk","HUN":"hu","ISL":"is","IND":"in","IDN":"id","IRN":"ir","IRQ":"iq","IRL":"ie","ISR":"il","ITA":"it","JAM":"jm","JPN":"jp","JOR":"jo","KAZ":"kz","KEN":"ke","PRK":"kp","KOR":"kr","KOS":"xk","KUW":"kw","KGZ":"kg","LAO":"la","LAT":"lv","LBN":"lb","LES":"ls","LBR":"lr","LBY":"ly","LIE":"li","LTU":"lt","LUX":"lu","MAC":"mo","MKD":"mk","MAD":"mg","MWI":"mw","MAS":"my","MDV":"mv","MLI":"ml","MLT":"mt","MTN":"mr","MRI":"mu","MEX":"mx","MDA":"md","MGL":"mn","MNE":"me","MAR":"ma","MOZ":"mz","MYA":"mm","NAM":"na","NEP":"np","NED":"nl","NCL":"nc","NZL":"nz","NCA":"ni","NIG":"ne","NGA":"ng","NOR":"no","OMA":"om","PAK":"pk","PLE":"ps","PAN":"pa","PNG":"pg","PAR":"py","PER":"pe","PHI":"ph","POL":"pl","POR":"pt","PUR":"pr","QAT":"qa","ROU":"ro","RUS":"ru","RWA":"rw","SKN":"kn","LCA":"lc","VIN":"vc","SAM":"ws","SMR":"sm","STP":"st","KSA":"sa","SEN":"sn","SRB":"rs","SEY":"sc","SLE":"sl","SGP":"sg","SVK":"sk","SVN":"si","SOL":"sb","SOM":"so","RSA":"za","ESP":"es","SRI":"lk","SUD":"sd","SSD":"ss","SUR":"sr","SWE":"se","SUI":"ch","SYR":"sy","TAH":"pf","TPE":"tw","TJK":"tj","TAN":"tz","THA":"th","TLS":"tl","TOG":"tg","TGA":"to","TRI":"tt","TUN":"tn","TUR":"tr","TKM":"tm","UGA":"ug","UKR":"ua","UAE":"ae","ENG":"gb-eng","SCO":"gb-sct","WAL":"gb-wls","NIR":"gb-nir","USA":"us","URU":"uy","UZB":"uz","VAN":"vu","VEN":"ve","VIE":"vn","YEM":"ye","ZAM":"zm","ZIM":"zw"};
         return map[nation] || "un";
     };
-
-    editStoryBtn.addEventListener('click', handleEditStoryClick);
-    cancelEditBtn.addEventListener('click', handleCancelEdit);
-    saveChangesBtn.addEventListener('click', handleSaveChanges);
-    commentForm.addEventListener('submit', handlePostComment);
-
-    window.addEventListener('hashchange', router);
-
-    storiesFeed.addEventListener('click', (event) => {
-        const card = event.target.closest('.story-card');
-        if (card && card.dataset.seasonId) {
-            handleViewStoryDetail(card.dataset.seasonId);
-        }
-    });
-
-    // Chạy hàm khởi tạo khi trang được tải
+    
     initializeApp();
 });
