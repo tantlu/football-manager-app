@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LOGIC ĐỊNH TUYẾN (ROUTING) ---
     const router = async () => {
+        console.log('Router is running... Hash is:', location.hash);
         const path = location.hash.slice(2).split('/');
         const currentRoute = path[0] || 'squad';
         const param = path[1];
@@ -495,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LOGIC MỚI: XEM CHI TIẾT CẦU THỦ ---
     const handleViewPlayerDetail = async (playerId) => {
+        console.log('Viewing player detail for ID:', playerId);
         const player = await apiCall(`/players/${playerId}`);
         if(player) {
             renderPlayerDetail(player);
