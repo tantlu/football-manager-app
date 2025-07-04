@@ -77,7 +77,7 @@ router.get('/details/:seasonId', async (req, res) => {
                     select: {
                         seasonName: true,
                         user: {
-                            select: { username: true }
+                            select: { id: true , username: true }
                         }
                     }
                 }
@@ -97,6 +97,35 @@ router.get('/details/:seasonId', async (req, res) => {
 
     } catch (error) {
         res.status(500).json({ message: "Failed to fetch story details." });
+    }
+});
+// API CẬP NHẬT (EDIT) một bài viết
+router.put('/:storyId', authMiddleware, async (req, res) => {
+    const { storyId } = req.params;
+    const { title, content } = req.body;
+    const userId = req.userData.userId;
+
+    try {
+        // Lấy thông tin story và season liên quan để kiểm tra quyền sở hữu
+        const storyToEdit = await prisma.careerStory.findUnique({
+            where: { id: parseInt(storyId) },
+            include: { season: true }
+        });
+
+        // BƯỚC BẢO MẬT: Nếu story không tồn tại hoặc user ID của season không khớp, từ chối quyền
+        if (!storyToEdit || storyToEdit.season.userId !== userId) {
+            return res.status(403).json({ message: "Forbidden: You can only edit your own stories." });
+        }
+
+        // Nếu hợp lệ, tiến hành cập nhật
+        const updatedStory = await prisma.careerStory.update({
+            where: { id: parseInt(storyId) },
+            data: { title, content }
+        });
+
+        res.json(updatedStory);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to update story.", error: error.message });
     }
 });
 

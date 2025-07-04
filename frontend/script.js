@@ -2,34 +2,41 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
+    // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
     const API_URL = 'https://football-manager-app.onrender.com/api';
 
     let token = null;
     let seasons = [];
     let currentSeasonId = null;
+    let currentStoryId = null; // Biến mới để lưu ID của story đang xem
     let playersData = [];
     let currentSort = { column: 'ca', order: 'desc' };
 
     // --- LẤY CÁC PHẦN TỬ GIAO DIỆN ---
     const loginView = document.getElementById('loginView');
     const appView = document.getElementById('appView');
+    const storyDetailView = document.getElementById('storyDetailView');
+    
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
+    
+    const mySquadTab = document.getElementById('mySquadTab');
+    const forumTab = document.getElementById('forumTab');
+    
+    const userInfoDiv = document.getElementById('userInfo');
     const seasonSelector = document.getElementById('seasonSelector');
     const createSeasonBtn = document.getElementById('createSeasonBtn');
+    
+    const squadViewContainer = document.getElementById('squadViewContainer');
+    const squadTitle = document.getElementById('squadTitle');
+    const filterInput = document.getElementById('filterInput');
+    const playerTable = document.getElementById('playerTable');
+    
     const uploadArea = document.getElementById('uploadArea');
     const uploadBtn = document.getElementById('uploadBtn');
     const fileInput = document.getElementById('fileInput');
-    const playerTable = document.getElementById('playerTable');
-    const squadTitle = document.getElementById('squadTitle');
-    const userInfoDiv = document.getElementById('userInfo');
-    const filterInput = document.getElementById('filterInput');
     const deleteSquadBtn = document.getElementById('deleteSquadBtn');
-    const mySquadTab = document.getElementById('mySquadTab');
-    const forumTab = document.getElementById('forumTab');
-    const squadViewContainer = document.getElementById('squadViewContainer');
-    const forumView = document.getElementById('forumView');
-    const storiesFeed = document.getElementById('storiesFeed');
+    
     const storyContainer = document.getElementById('storyContainer');
     const storyHeader = document.getElementById('storyHeader');
     const storyDisplay = document.getElementById('storyDisplay');
@@ -37,12 +44,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyTitleInput = document.getElementById('storyTitleInput');
     const storyContentTextarea = document.getElementById('storyContentTextarea');
     const saveStoryBtn = document.getElementById('saveStoryBtn');
-    const storyDetailView = document.getElementById('storyDetailView');
+
+    const forumView = document.getElementById('forumView');
+    const storiesFeed = document.getElementById('storiesFeed');
+
     const backToForumBtn = document.getElementById('backToForumBtn');
     const detailStoryTitle = document.getElementById('detailStoryTitle');
     const detailStoryMeta = document.getElementById('detailStoryMeta');
     const detailStoryContent = document.getElementById('detailStoryContent');
     const detailPlayerTable = document.getElementById('detailPlayerTable');
+    const editStoryBtn = document.getElementById('editStoryBtn');
+    const detailStoryEditor = document.getElementById('detailStoryEditor');
+    const editStoryTitleInput = document.getElementById('editStoryTitleInput');
+    const editStoryContentTextarea = document.getElementById('editStoryContentTextarea');
+    const saveChangesBtn = document.getElementById('saveChangesBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const commentSection = document.getElementById('commentSection');
+    const commentForm = document.getElementById('commentForm');
+    const commentContent = document.getElementById('commentContent');
+    const commentList = document.getElementById('commentList');
 
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
@@ -92,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             token = result.token;
             localStorage.setItem('authToken', token);
             localStorage.setItem('username', username);
+            localStorage.setItem('userId', result.userId); // <-- LƯU USER ID
             initializeApp();
         }
     };
@@ -113,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
         location.hash = ''; // Xóa hash để quay về trang đăng nhập
+        localStorage.removeItem('userId');
         showLoginView();
     };
 
@@ -153,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- CÁC HÀM HIỂN THỊ VIEW ---
+    
     const showSquadView = () => {
         squadViewContainer.style.display = 'block';
         mySquadTab.classList.add('active');
@@ -253,19 +276,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleViewStoryDetail = async (seasonId) => {
         const data = await apiCall(`/stories/details/${seasonId}`);
         if (data) {
+            currentStoryId = data.story.id; // Lưu lại storyId hiện tại
+            const loggedInUserId = localStorage.getItem('userId');
+            
             appView.style.display = 'none';
             storyDetailView.style.display = 'block';
             
+            // Hiện/ẩn các phần tử
+            detailStoryContent.style.display = 'block';
+            detailStoryEditor.style.display = 'none';
+
+            // Điền dữ liệu story
             detailStoryTitle.innerText = data.story.title;
             detailStoryMeta.innerText = `By ${data.story.season.user.username} for season ${data.story.season.seasonName}`;
             detailStoryContent.innerText = data.story.content;
             
+            // Kiểm tra quyền sở hữu để hiện nút Edit
+            if (loggedInUserId && parseInt(loggedInUserId) === data.story.season.user.id) {
+                editStoryBtn.style.display = 'block';
+            } else {
+                editStoryBtn.style.display = 'none';
+            }
+            
+            // Tải và hiển thị bình luận
+            await fetchComments(data.story.id);
+
+            // Render bảng cầu thủ
             renderTable(data.players, detailPlayerTable);
         }
     };
+    const handleBackToForum = () => { location.hash = '#/forum'; };
 
-    const handleBackToForum = () => {
-        location.hash = '#/forum';
+    // --- HÀM MỚI: CHỈNH SỬA BÀI VIẾT ---
+    const handleEditStoryClick = () => {
+        // Lấy nội dung hiện tại để điền vào form editor
+        editStoryTitleInput.value = detailStoryTitle.innerText;
+        editStoryContentTextarea.value = detailStoryContent.innerText;
+
+        // Ẩn nội dung tĩnh, hiện form editor
+        detailStoryContent.style.display = 'none';
+        editStoryBtn.style.display = 'none';
+        detailStoryEditor.style.display = 'block';
+    };
+
+    const handleCancelEdit = () => {
+        // Hiện lại nội dung tĩnh, ẩn form editor
+        detailStoryContent.style.display = 'block';
+        editStoryBtn.style.display = 'block';
+        detailStoryEditor.style.display = 'none';
+    };
+
+    const handleSaveChanges = async () => {
+        const title = editStoryTitleInput.value;
+        const content = editStoryContentTextarea.value;
+
+        if (!currentStoryId || !title || !content) {
+            return alert('Title and content cannot be empty.');
+        }
+
+        const updatedStory = await apiCall(`/stories/${currentStoryId}`, 'PUT', { title, content });
+        if(updatedStory) {
+            alert('Story updated successfully!');
+            // Cập nhật lại giao diện với nội dung mới
+            detailStoryTitle.innerText = updatedStory.title;
+            detailStoryContent.innerText = updatedStory.content;
+            handleCancelEdit(); // Quay lại view xem bài viết
+        }
+    };
+
+    // --- HÀM MỚI: BÌNH LUẬN ---
+    const fetchComments = async (storyId) => {
+        const comments = await apiCall(`/comments/${storyId}`);
+        if (comments) {
+            renderComments(comments);
+        }
+    };
+
+    const renderComments = (comments) => {
+        if (comments.length === 0) {
+            commentList.innerHTML = '<p class="text-muted">No comments yet. Be the first to comment!</p>';
+            return;
+        }
+        commentList.innerHTML = comments.map(comment => `
+            <div class="border-bottom pb-2 mb-2">
+                <p class="mb-1">${comment.content}</p>
+                <small class="text-muted">
+                    By <strong>${comment.author.username}</strong> on ${new Date(comment.createdAt).toLocaleString()}
+                </small>
+            </div>
+        `).join('');
+    };
+
+    const handlePostComment = async (event) => {
+        event.preventDefault();
+        const content = commentContent.value;
+        if (!content || !currentStoryId) return;
+
+        const newComment = await apiCall(`/comments/${currentStoryId}`, 'POST', { content });
+        if (newComment) {
+            commentContent.value = ''; // Xóa nội dung trong textarea
+            fetchComments(currentStoryId); // Tải lại danh sách bình luận
+        }
     };
 
     // --- CÁC HÀM HIỂN THỊ & CẬP NHẬT GIAO DIỆN ---
@@ -349,8 +460,9 @@ window.renderTable = (data, tableElement = playerTable) => {
     const initializeApp = async () => {
         token = localStorage.getItem('authToken');
         if (token) {
+            showAppView();
             await fetchSeasons();
-            await router(); // Chạy router để hiển thị đúng trang theo URL
+            await router();
         } else {
             showLoginView();
         }
@@ -369,9 +481,8 @@ window.renderTable = (data, tableElement = playerTable) => {
         const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
         renderTable(filtered, playerTable);
     });
+    
     backToForumBtn.addEventListener('click', handleBackToForum);
-    window.addEventListener('hashchange', router);
-
     // --- CÁC HÀM TIỆN ÍCH ---
     window.getCaColor = (value) => {
         if (value >= 180) return '#28a745'; if (value >= 160) return '#d4edda'; if (value >= 140) return '#cce5ff';
@@ -389,7 +500,13 @@ window.renderTable = (data, tableElement = playerTable) => {
         const map = {"AFG":"af","ALB":"al","ALG":"dz","AND":"ad","ANG":"ao","ATG":"ag","ARG":"ar","ARM":"am","AUS":"au","AUT":"at","AZE":"az","BAH":"bs","BHR":"bh","BAN":"bd","BRB":"bb","BLR":"by","BEL":"be","BLZ":"bz","BEN":"bj","BTN":"bt","BOL":"bo","BIH":"ba","BOT":"bw","BRA":"br","BRU":"bn","BUL":"bg","BFA":"bf","BDI":"bi","CAM":"kh","CMR":"cm","CAN":"ca","CPV":"cv","CTA":"cf","CHA":"td","CHI":"cl","CHN":"cn","COL":"co","COM":"km","CGO":"cg","COD":"cd","CRC":"cr","CIV":"ci","CRO":"hr","CUB":"cu","CYP":"cy","CZE":"cz","DEN":"dk","DJI":"dj","DMA":"dm","DOM":"do","ECU":"ec","EGY":"eg","SLV":"sv","EQG":"gq","ERI":"er","EST":"ee","ETH":"et","FIJ":"fj","FIN":"fi","FRA":"fr","GAB":"ga","GAM":"gm","GEO":"ge","GER":"de","GHA":"gh","GRE":"gr","GRN":"gd","GUA":"gt","GUI":"gn","GNB":"gw","GUY":"gy","HAI":"ht","HON":"hn","HKG":"hk","HUN":"hu","ISL":"is","IND":"in","IDN":"id","IRN":"ir","IRQ":"iq","IRL":"ie","ISR":"il","ITA":"it","JAM":"jm","JPN":"jp","JOR":"jo","KAZ":"kz","KEN":"ke","PRK":"kp","KOR":"kr","KOS":"xk","KUW":"kw","KGZ":"kg","LAO":"la","LAT":"lv","LBN":"lb","LES":"ls","LBR":"lr","LBY":"ly","LIE":"li","LTU":"lt","LUX":"lu","MAC":"mo","MKD":"mk","MAD":"mg","MWI":"mw","MAS":"my","MDV":"mv","MLI":"ml","MLT":"mt","MTN":"mr","MRI":"mu","MEX":"mx","MDA":"md","MGL":"mn","MNE":"me","MAR":"ma","MOZ":"mz","MYA":"mm","NAM":"na","NEP":"np","NED":"nl","NCL":"nc","NZL":"nz","NCA":"ni","NIG":"ne","NGA":"ng","NOR":"no","OMA":"om","PAK":"pk","PLE":"ps","PAN":"pa","PNG":"pg","PAR":"py","PER":"pe","PHI":"ph","POL":"pl","POR":"pt","PUR":"pr","QAT":"qa","ROU":"ro","RUS":"ru","RWA":"rw","SKN":"kn","LCA":"lc","VIN":"vc","SAM":"ws","SMR":"sm","STP":"st","KSA":"sa","SEN":"sn","SRB":"rs","SEY":"sc","SLE":"sl","SGP":"sg","SVK":"sk","SVN":"si","SOL":"sb","SOM":"so","RSA":"za","ESP":"es","SRI":"lk","SUD":"sd","SSD":"ss","SUR":"sr","SWE":"se","SUI":"ch","SYR":"sy","TAH":"pf","TPE":"tw","TJK":"tj","TAN":"tz","THA":"th","TLS":"tl","TOG":"tg","TGA":"to","TRI":"tt","TUN":"tn","TUR":"tr","TKM":"tm","UGA":"ug","UKR":"ua","UAE":"ae","ENG":"gb-eng","SCO":"gb-sct","WAL":"gb-wls","NIR":"gb-nir","USA":"us","URU":"uy","UZB":"uz","VAN":"vu","VEN":"ve","VIE":"vn","YEM":"ye","ZAM":"zm","ZIM":"zw"};
         return map[nation] || "un";
     };
-    backToForumBtn.addEventListener('click', handleBackToForum);
+
+    editStoryBtn.addEventListener('click', handleEditStoryClick);
+    cancelEditBtn.addEventListener('click', handleCancelEdit);
+    saveChangesBtn.addEventListener('click', handleSaveChanges);
+    commentForm.addEventListener('submit', handlePostComment);
+
+    window.addEventListener('hashchange', router);
 
     storiesFeed.addEventListener('click', (event) => {
         const card = event.target.closest('.story-card');

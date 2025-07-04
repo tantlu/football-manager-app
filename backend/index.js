@@ -19,11 +19,13 @@ const authRoutes = require('./routes/auth');
 const seasonRoutes = require('./routes/seasons');
 const squadRoutes = require('./routes/squads');
 const storyRoutes = require('./routes/stories');
+const commentRoutes = require('./routes/comments');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/seasons', seasonRoutes);
 app.use('/api/squads', squadRoutes);
 app.use('/api/stories', storyRoutes);
+app.use('/api/comments', commentRoutes);
 
 
 // Route thử nghiệm
