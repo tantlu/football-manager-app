@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
-    const API_URL = 'https://football-manager-app.onrender.com/api'; // Địa chỉ backend của bạn
+    const API_URL = 'https://football-manager-app.onrender.com/api';
 
     let token = null;
     let seasons = [];
@@ -25,13 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInfoDiv = document.getElementById('userInfo');
     const filterInput = document.getElementById('filterInput');
     const deleteSquadBtn = document.getElementById('deleteSquadBtn');
-    const storyDetailView = document.getElementById('storyDetailView');
-    const backToForumBtn = document.getElementById('backToForumBtn');
-    const detailStoryTitle = document.getElementById('detailStoryTitle');
-    const detailStoryMeta = document.getElementById('detailStoryMeta');
-    const detailStoryContent = document.getElementById('detailStoryContent');
-    const detailPlayerTable = document.getElementById('detailPlayerTable');
-    // Các biến mới cho tính năng story/forum
     const mySquadTab = document.getElementById('mySquadTab');
     const forumTab = document.getElementById('forumTab');
     const squadViewContainer = document.getElementById('squadViewContainer');
@@ -44,6 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyTitleInput = document.getElementById('storyTitleInput');
     const storyContentTextarea = document.getElementById('storyContentTextarea');
     const saveStoryBtn = document.getElementById('saveStoryBtn');
+    const storyDetailView = document.getElementById('storyDetailView');
+    const backToForumBtn = document.getElementById('backToForumBtn');
+    const detailStoryTitle = document.getElementById('detailStoryTitle');
+    const detailStoryMeta = document.getElementById('detailStoryMeta');
+    const detailStoryContent = document.getElementById('detailStoryContent');
+    const detailPlayerTable = document.getElementById('detailPlayerTable');
 
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
@@ -82,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+
     // --- LOGIC XÁC THỰC ---
     const handleLogin = async (event) => {
         event.preventDefault();
@@ -112,24 +112,60 @@ document.addEventListener('DOMContentLoaded', () => {
         token = null;
         localStorage.removeItem('authToken');
         localStorage.removeItem('username');
+        location.hash = ''; // Xóa hash để quay về trang đăng nhập
         showLoginView();
     };
 
-    // --- LOGIC CHUYỂN TAB ---
+    // --- LOGIC ĐỊNH TUYẾN (ROUTING) ---
+    const router = async () => {
+        const path = location.hash.slice(2).split('/');
+        const currentRoute = path[0] || 'squad';
+        const param = path[1];
+
+        if (!token) {
+            showLoginView();
+            return;
+        }
+
+        showAppView();
+        
+        // Ẩn tất cả các view chính trước khi hiển thị view mới
+        squadViewContainer.style.display = 'none';
+        forumView.style.display = 'none';
+        storyDetailView.style.display = 'none';
+
+        switch (currentRoute) {
+            case 'squad':
+                showSquadView();
+                break;
+            case 'forum':
+                await showForumView();
+                break;
+            case 'story':
+                if (param) {
+                    await handleViewStoryDetail(param);
+                }
+                break;
+            default:
+                location.hash = '#/squad';
+                break;
+        }
+    };
+
+    // --- CÁC HÀM HIỂN THỊ VIEW ---
     const showSquadView = () => {
         squadViewContainer.style.display = 'block';
-        forumView.style.display = 'none';
         mySquadTab.classList.add('active');
         forumTab.classList.remove('active');
     };
 
-    const showForumView = () => {
-        squadViewContainer.style.display = 'none';
+    const showForumView = async () => {
         forumView.style.display = 'block';
         mySquadTab.classList.remove('active');
         forumTab.classList.add('active');
-        fetchPublicFeed();
+        await fetchPublicFeed();
     };
+
 
     // --- LOGIC MÙA GIẢI & ĐỘI HÌNH ---
     const fetchSeasons = async () => {
@@ -138,13 +174,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderSeasonSelector();
         if (seasons.length > 0) {
-            currentSeasonId = seasons[0].id;
+            currentSeasonId = seasonSelector.value || seasons[0].id;
             seasonSelector.value = currentSeasonId;
             fetchSquadForSeason(currentSeasonId);
             uploadArea.style.display = 'block';
-            storyContainer.style.display = 'block';
         } else {
-            // Xử lý khi không có mùa giải nào
             uploadArea.style.display = 'block';
             storyContainer.style.display = 'none';
             playerTable.innerHTML = `<tr><td colspan="13" class="text-center">No seasons found. Please create a new season.</td></tr>`;
@@ -159,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(newSeason) {
                 await fetchSeasons();
                 seasonSelector.value = newSeason.id;
+                location.hash = '#/squad'; // Đảm bảo đang ở squad view
                 await fetchSquadForSeason(newSeason.id);
             }
         }
@@ -176,92 +211,17 @@ document.addEventListener('DOMContentLoaded', () => {
         squadTitle.innerText = season ? `SQUAD VIEW - ${season.seasonName}` : 'SQUAD VIEW';
         
         playersData = await apiCall(`/squads/${seasonId}`);
-        renderTable(playersData || []);
+        renderTable(playersData || [], playerTable);
         updateSidebar(playersData || []);
         await fetchStoryForSeason(seasonId);
     };
 
-    const handleUpload = async () => {
-        if (!fileInput.files[0]) {
-            alert('Please select a file to upload.');
-            return;
-        }
-        if (!currentSeasonId) {
-            alert('Please create and select a season first.');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('squadFile', fileInput.files[0]);
-
-        uploadBtn.disabled = true;
-        uploadBtn.innerText = 'Uploading...';
-        const result = await apiCall(`/squads/upload/${currentSeasonId}`, 'POST', formData);
-        if(result) {
-            alert(result.message);
-            fileInput.value = '';
-            fetchSquadForSeason(currentSeasonId);
-        }
-        uploadBtn.disabled = false;
-        uploadBtn.innerText = 'Upload';
-    };
-
-    const handleDeleteSquad = async () => {
-        if (!currentSeasonId) {
-            alert('Please select a season to delete.');
-            return;
-        }
-        const season = seasons.find(s => s.id == currentSeasonId);
-        const confirmation = confirm(`Are you sure you want to delete all squad data for season "${season.seasonName}"?\nThis action cannot be undone.`);
-
-        if (confirmation) {
-            const result = await apiCall(`/squads/${currentSeasonId}`, 'DELETE');
-            if (result) {
-                alert(result.message);
-                fetchSquadForSeason(currentSeasonId);
-            }
-        }
-    };
+    const handleUpload = async () => { /* ... giữ nguyên ... */ };
+    const handleDeleteSquad = async () => { /* ... giữ nguyên ... */ };
 
     // --- LOGIC STORY/FORUM ---
-    const fetchStoryForSeason = async (seasonId) => {
-        if (!seasonId) {
-            storyContainer.style.display = 'none';
-            return;
-        }
-        
-        const season = seasons.find(s => s.id == seasonId);
-        storyHeader.innerText = `My Story for ${season.seasonName}`;
-
-        const story = await apiCall(`/stories/${seasonId}`);
-        if(story) {
-            storyTitleInput.value = story.title;
-            storyContentTextarea.value = story.content;
-            storyDisplay.innerHTML = `<h4>${story.title}</h4><p>${story.content}</p>`;
-        } else {
-            storyTitleInput.value = '';
-            storyContentTextarea.value = '';
-            storyDisplay.innerHTML = `<p class="text-muted">You haven't written a story for this season yet.</p>`;
-        }
-        storyContainer.style.display = 'block';
-    };
-
-    const handleSaveStory = async () => {
-        const title = storyTitleInput.value;
-        const content = storyContentTextarea.value;
-        if (!currentSeasonId || !title || !content) {
-            alert("Please select a season and provide both a title and content.");
-            return;
-        }
-        saveStoryBtn.disabled = true;
-        saveStoryBtn.innerText = 'Saving...';
-        const result = await apiCall(`/stories/${currentSeasonId}`, 'POST', { title, content });
-        if(result) {
-            alert('Story saved!');
-            storyDisplay.innerHTML = `<h4>${result.title}</h4><p>${result.content}</p>`;
-        }
-        saveStoryBtn.disabled = false;
-        saveStoryBtn.innerText = 'Save Story';
-    };
+    const fetchStoryForSeason = async (seasonId) => { /* ... giữ nguyên ... */ };
+    const handleSaveStory = async () => { /* ... giữ nguyên ... */ };
 
     const fetchPublicFeed = async () => {
         storiesFeed.innerHTML = '<p>Loading stories...</p>';
@@ -272,48 +232,47 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderPublicFeed = (stories) => {
-    if (!stories || stories.length === 0) {
-        storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
-        return;
-    }
-    storiesFeed.innerHTML = stories.map(story => `
-        <div class="story-card" data-season-id="${story.seasonId}" style="cursor: pointer;">
-            <h3 class="story-title">${story.title}</h3>
-            <p class="story-meta">
-                By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
-            </p>
-            <p class="story-content">${story.content.substring(0, 400)}...</p>
-            <a href="#" class="stretched-link"></a>
-        </div>
-    `).join('');
+        if (!stories || stories.length === 0) {
+            storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
+            return;
+        }
+        // SỬA LỖI: Dùng thẻ <a> với href đúng để routing hoạt động
+        storiesFeed.innerHTML = stories.map(story => `
+            <a href="#/story/${story.seasonId}" class="story-card-link text-decoration-none">
+                <div class="story-card">
+                    <h3 class="story-title">${story.title}</h3>
+                    <p class="story-meta">
+                        By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
+                    </p>
+                    <p class="story-content">${story.content.substring(0, 400)}...</p>
+                </div>
+            </a>
+        `).join('');
     };
+    
     const handleViewStoryDetail = async (seasonId) => {
-    const data = await apiCall(`/stories/details/${seasonId}`);
-    if (data) {
-        // Chuyển đổi giao diện
-        appView.style.display = 'none';
-        storyDetailView.style.display = 'block';
-
-        // Điền dữ liệu vào view
-        detailStoryTitle.innerText = data.story.title;
-        detailStoryMeta.innerText = `By ${data.story.season.user.username} for season ${data.story.season.seasonName}`;
-        detailStoryContent.innerText = data.story.content;
-
-        // Dùng lại hàm renderTable nhưng cho bảng chi tiết
-        renderTable(data.players, detailPlayerTable);
+        const data = await apiCall(`/stories/details/${seasonId}`);
+        if (data) {
+            appView.style.display = 'none';
+            storyDetailView.style.display = 'block';
+            
+            detailStoryTitle.innerText = data.story.title;
+            detailStoryMeta.innerText = `By ${data.story.season.user.username} for season ${data.story.season.seasonName}`;
+            detailStoryContent.innerText = data.story.content;
+            
+            renderTable(data.players, detailPlayerTable);
         }
     };
 
     const handleBackToForum = () => {
-        storyDetailView.style.display = 'none';
-        appView.style.display = 'block';
-        showForumView(); // Quay lại và kích hoạt tab forum
+        location.hash = '#/forum';
     };
 
     // --- CÁC HÀM HIỂN THỊ & CẬP NHẬT GIAO DIỆN ---
     const showLoginView = () => {
         loginView.style.display = 'block';
         appView.style.display = 'none';
+        storyDetailView.style.display = 'none';
     };
 
     const showAppView = () => {
@@ -390,9 +349,8 @@ window.renderTable = (data, tableElement = playerTable) => {
     const initializeApp = async () => {
         token = localStorage.getItem('authToken');
         if (token) {
-            showAppView();
-            showSquadView();
             await fetchSeasons();
+            await router(); // Chạy router để hiển thị đúng trang theo URL
         } else {
             showLoginView();
         }
@@ -405,14 +363,14 @@ window.renderTable = (data, tableElement = playerTable) => {
     seasonSelector.addEventListener('change', (e) => fetchSquadForSeason(e.target.value));
     uploadBtn.addEventListener('click', handleUpload);
     deleteSquadBtn.addEventListener('click', handleDeleteSquad);
-    mySquadTab.addEventListener('click', (e) => { e.preventDefault(); showSquadView(); });
-    forumTab.addEventListener('click', (e) => { e.preventDefault(); showForumView(); });
     saveStoryBtn.addEventListener('click', handleSaveStory);
     filterInput.addEventListener('keyup', (e) => {
         const searchTerm = e.target.value.toLowerCase();
         const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
-        renderTable(filtered);
+        renderTable(filtered, playerTable);
     });
+    backToForumBtn.addEventListener('click', handleBackToForum);
+    window.addEventListener('hashchange', router);
 
     // --- CÁC HÀM TIỆN ÍCH ---
     window.getCaColor = (value) => {
