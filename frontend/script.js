@@ -25,6 +25,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInfoDiv = document.getElementById('userInfo');
     const filterInput = document.getElementById('filterInput');
     const deleteSquadBtn = document.getElementById('deleteSquadBtn');
+    const storyDetailView = document.getElementById('storyDetailView');
+    const backToForumBtn = document.getElementById('backToForumBtn');
+    const detailStoryTitle = document.getElementById('detailStoryTitle');
+    const detailStoryMeta = document.getElementById('detailStoryMeta');
+    const detailStoryContent = document.getElementById('detailStoryContent');
+    const detailPlayerTable = document.getElementById('detailPlayerTable');
     // Các biến mới cho tính năng story/forum
     const mySquadTab = document.getElementById('mySquadTab');
     const forumTab = document.getElementById('forumTab');
@@ -266,19 +272,42 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderPublicFeed = (stories) => {
-        if (!stories || stories.length === 0) {
-            storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
-            return;
+    if (!stories || stories.length === 0) {
+        storiesFeed.innerHTML = '<p>No career stories have been shared yet.</p>';
+        return;
+    }
+    storiesFeed.innerHTML = stories.map(story => `
+        <div class="story-card" data-season-id="${story.seasonId}" style="cursor: pointer;">
+            <h3 class="story-title">${story.title}</h3>
+            <p class="story-meta">
+                By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
+            </p>
+            <p class="story-content">${story.content.substring(0, 400)}...</p>
+            <a href="#" class="stretched-link"></a>
+        </div>
+    `).join('');
+    };
+    const handleViewStoryDetail = async (seasonId) => {
+    const data = await apiCall(`/stories/details/${seasonId}`);
+    if (data) {
+        // Chuyển đổi giao diện
+        appView.style.display = 'none';
+        storyDetailView.style.display = 'block';
+
+        // Điền dữ liệu vào view
+        detailStoryTitle.innerText = data.story.title;
+        detailStoryMeta.innerText = `By ${data.story.season.user.username} for season ${data.story.season.seasonName}`;
+        detailStoryContent.innerText = data.story.content;
+
+        // Dùng lại hàm renderTable nhưng cho bảng chi tiết
+        renderTable(data.players, detailPlayerTable);
         }
-        storiesFeed.innerHTML = stories.map(story => `
-            <div class="story-card">
-                <h3 class="story-title">${story.title}</h3>
-                <p class="story-meta">
-                    By <strong>${story.season.user.username}</strong> for season ${story.season.seasonName}
-                </p>
-                <p class="story-content">${story.content.substring(0, 400)}...</p>
-            </div>
-        `).join('');
+    };
+
+    const handleBackToForum = () => {
+        storyDetailView.style.display = 'none';
+        appView.style.display = 'block';
+        showForumView(); // Quay lại và kích hoạt tab forum
     };
 
     // --- CÁC HÀM HIỂN THỊ & CẬP NHẬT GIAO DIỆN ---
@@ -302,34 +331,35 @@ document.addEventListener('DOMContentLoaded', () => {
         seasonSelector.innerHTML = seasons.map(s => `<option value="${s.id}">${s.seasonName}</option>`).join('');
     };
 
-    window.renderTable = (data) => {
-        if (!data || data.length === 0) {
-            playerTable.innerHTML = `<tr><td colspan="13" class="text-center">No player data for this season. Please upload a file.</td></tr>`;
-            return;
-        }
-        playerTable.innerHTML = data.map(player => `
-             <tr>
-                <td>${player.dorsal || '-'}</td>
-                <td>
-                    <div>
-                        <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
-                        <span class="player-name">${player.name}</span>
-                    </div>
-                    <span class="player-position">${player.position}</span>
-                </td>
-                <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
-                <td>${player.age}</td>
-                <td>${player.morale}</td>
-                <td>${player.personality}</td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
-                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
-                <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
-                <td>${player.matches}</td>
-                <td>${player.goals} / ${player.assists}</td>
-                <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
-            </tr>
-        `).join('');
+    // Sửa lại hàm renderTable để nhận tham số là element của bảng
+window.renderTable = (data, tableElement = playerTable) => {
+    if (!data || data.length === 0) {
+        tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
+        return;
+    }
+    tableElement.innerHTML = data.map(player => `
+        <tr>
+            <td>${player.dorsal || '-'}</td>
+            <td>
+                <div>
+                    <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
+                    <span class="player-name">${player.name}</span>
+                </div>
+                <span class="player-position">${player.position}</span>
+            </td>
+            <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
+            <td>${player.age}</td>
+            <td>${player.morale}</td>
+            <td>${player.personality}</td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
+            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
+            <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
+            <td>${player.matches}</td>
+            <td>${player.goals} / ${player.assists}</td>
+            <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
+        </tr>
+    `).join('');
     };
     
     const updateSidebar = (data) => {
@@ -401,6 +431,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = {"AFG":"af","ALB":"al","ALG":"dz","AND":"ad","ANG":"ao","ATG":"ag","ARG":"ar","ARM":"am","AUS":"au","AUT":"at","AZE":"az","BAH":"bs","BHR":"bh","BAN":"bd","BRB":"bb","BLR":"by","BEL":"be","BLZ":"bz","BEN":"bj","BTN":"bt","BOL":"bo","BIH":"ba","BOT":"bw","BRA":"br","BRU":"bn","BUL":"bg","BFA":"bf","BDI":"bi","CAM":"kh","CMR":"cm","CAN":"ca","CPV":"cv","CTA":"cf","CHA":"td","CHI":"cl","CHN":"cn","COL":"co","COM":"km","CGO":"cg","COD":"cd","CRC":"cr","CIV":"ci","CRO":"hr","CUB":"cu","CYP":"cy","CZE":"cz","DEN":"dk","DJI":"dj","DMA":"dm","DOM":"do","ECU":"ec","EGY":"eg","SLV":"sv","EQG":"gq","ERI":"er","EST":"ee","ETH":"et","FIJ":"fj","FIN":"fi","FRA":"fr","GAB":"ga","GAM":"gm","GEO":"ge","GER":"de","GHA":"gh","GRE":"gr","GRN":"gd","GUA":"gt","GUI":"gn","GNB":"gw","GUY":"gy","HAI":"ht","HON":"hn","HKG":"hk","HUN":"hu","ISL":"is","IND":"in","IDN":"id","IRN":"ir","IRQ":"iq","IRL":"ie","ISR":"il","ITA":"it","JAM":"jm","JPN":"jp","JOR":"jo","KAZ":"kz","KEN":"ke","PRK":"kp","KOR":"kr","KOS":"xk","KUW":"kw","KGZ":"kg","LAO":"la","LAT":"lv","LBN":"lb","LES":"ls","LBR":"lr","LBY":"ly","LIE":"li","LTU":"lt","LUX":"lu","MAC":"mo","MKD":"mk","MAD":"mg","MWI":"mw","MAS":"my","MDV":"mv","MLI":"ml","MLT":"mt","MTN":"mr","MRI":"mu","MEX":"mx","MDA":"md","MGL":"mn","MNE":"me","MAR":"ma","MOZ":"mz","MYA":"mm","NAM":"na","NEP":"np","NED":"nl","NCL":"nc","NZL":"nz","NCA":"ni","NIG":"ne","NGA":"ng","NOR":"no","OMA":"om","PAK":"pk","PLE":"ps","PAN":"pa","PNG":"pg","PAR":"py","PER":"pe","PHI":"ph","POL":"pl","POR":"pt","PUR":"pr","QAT":"qa","ROU":"ro","RUS":"ru","RWA":"rw","SKN":"kn","LCA":"lc","VIN":"vc","SAM":"ws","SMR":"sm","STP":"st","KSA":"sa","SEN":"sn","SRB":"rs","SEY":"sc","SLE":"sl","SGP":"sg","SVK":"sk","SVN":"si","SOL":"sb","SOM":"so","RSA":"za","ESP":"es","SRI":"lk","SUD":"sd","SSD":"ss","SUR":"sr","SWE":"se","SUI":"ch","SYR":"sy","TAH":"pf","TPE":"tw","TJK":"tj","TAN":"tz","THA":"th","TLS":"tl","TOG":"tg","TGA":"to","TRI":"tt","TUN":"tn","TUR":"tr","TKM":"tm","UGA":"ug","UKR":"ua","UAE":"ae","ENG":"gb-eng","SCO":"gb-sct","WAL":"gb-wls","NIR":"gb-nir","USA":"us","URU":"uy","UZB":"uz","VAN":"vu","VEN":"ve","VIE":"vn","YEM":"ye","ZAM":"zm","ZIM":"zw"};
         return map[nation] || "un";
     };
+    backToForumBtn.addEventListener('click', handleBackToForum);
+
+    storiesFeed.addEventListener('click', (event) => {
+        const card = event.target.closest('.story-card');
+        if (card && card.dataset.seasonId) {
+            handleViewStoryDetail(card.dataset.seasonId);
+        }
+    });
 
     // Chạy hàm khởi tạo khi trang được tải
     initializeApp();

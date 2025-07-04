@@ -146,7 +146,45 @@
             </div>
         </div>
     </div>
-    
+    <div id="storyDetailView" class="container mt-4" style="display: none;">
+    <div class="row">
+        <div class="col-12">
+            <button id="backToForumBtn" class="btn btn-secondary mb-3"><i class="bi bi-arrow-left"></i> Back to Forum</button>
+            <div class="main-content-card">
+                <h2 id="detailStoryTitle"></h2>
+                <p id="detailStoryMeta" class="text-muted"></p>
+                <hr>
+                <div id="detailStoryContent" class="story-content mb-4"></div>
+            </div>
+
+            <div class="main-content-card mt-4">
+                <h3>Associated Squad</h3>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle text-start">
+                         <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Name</th>
+                                <th>CA</th>
+                                <th>Age</th>
+                                <th>Morale</th>
+                                <th>Personality</th>
+                                <th>Wor</th>
+                                <th>Tec</th>
+                                <th>Pac</th>
+                                <th>Est. Value</th>
+                                <th>Parties</th>
+                                <th>G/A</th>
+                                <th>Avg. Rat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailPlayerTable"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

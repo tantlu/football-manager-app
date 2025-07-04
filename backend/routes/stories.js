@@ -66,4 +66,38 @@ router.get('/public/feed', async (req, res) => {
     }
 });
 
+// API MỚI: Lấy chi tiết một câu chuyện và đội hình liên quan
+router.get('/details/:seasonId', async (req, res) => {
+    const { seasonId } = req.params;
+    try {
+        const story = await prisma.careerStory.findUnique({
+            where: { seasonId: parseInt(seasonId) },
+            include: {
+                season: {
+                    select: {
+                        seasonName: true,
+                        user: {
+                            select: { username: true }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!story) {
+            return res.status(404).json({ message: "Story not found." });
+        }
+
+        const players = await prisma.player.findMany({
+            where: { seasonId: parseInt(seasonId) },
+            orderBy: { ca: 'desc' }
+        });
+
+        res.json({ story, players });
+
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch story details." });
+    }
+});
+
 module.exports = router;
