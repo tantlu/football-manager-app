@@ -1,6 +1,7 @@
-// File: frontend/script.js
+// File: frontend/script.js (Phiên bản đã dọn dẹp cho kiến trúc mới)
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- KHAI BÁO BIẾN TRẠNG THÁI VÀ HẰNG SỐ ---
     const API_URL = 'https://football-manager-app.onrender.com/api';
 
     let token = null;
@@ -9,14 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStoryId = null;
     let playersData = [];
     let currentSort = { column: 'ca', order: 'desc' };
-    let lastViewedHash = '#/squad';
 
     // --- LẤY CÁC PHẦN TỬ GIAO DIỆN ---
     const loginView = document.getElementById('loginView');
     const appView = document.getElementById('appView');
     const storyDetailView = document.getElementById('storyDetailView');
-    const playerDetailView = document.getElementById('playerDetailView');
-    const allMainViews = [loginView, appView, storyDetailView, playerDetailView];
+    const allMainViews = [loginView, appView, storyDetailView]; // Đã loại bỏ playerDetailView
     // ... và các getElementById khác ...
     const loginForm = document.getElementById('loginForm');
     const registerForm = document.getElementById('registerForm');
@@ -57,10 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentContent = document.getElementById('commentContent');
     const commentList = document.getElementById('commentList');
 
-
     // --- HÀM GỌI API CHUNG ---
     const apiCall = async (endpoint, method = 'GET', body = null) => {
-        const options = { method, headers: {} };
+        const options = {
+            method,
+            headers: {}
+        };
         if (token) {
             options.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -129,25 +130,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const path = location.hash.slice(2).split('/');
         const currentRoute = path[0] || 'squad';
         const param = path[1];
-
         if (!token) {
             showView(loginView);
             return;
         }
         
+        showView(appView);
         switch (currentRoute) {
             case 'squad':
+                showSquadView();
+                break;
             case 'forum':
-                showView(appView);
-                if (currentRoute === 'squad') showSquadView();
-                else await showForumView();
-                lastViewedHash = location.hash;
+                await showForumView();
                 break;
             case 'story':
                 if (param) await handleViewStoryDetail(param);
-                break;
-            case 'player':
-                if (param) await handleViewPlayerDetail(param);
                 break;
             default:
                 location.hash = '#/squad';
@@ -196,9 +193,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const handleCreateSeason = async () => {
         const seasonName = prompt("Enter new season name (e.g., 2024-2025):");
-        if(seasonName) {
+        if (seasonName) {
             const newSeason = await apiCall('/seasons', 'POST', { seasonName });
-            if(newSeason) {
+            if (newSeason) {
                 await fetchSeasons();
                 seasonSelector.value = newSeason.id;
                 location.hash = '#/squad';
@@ -230,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
         uploadBtn.disabled = true;
         uploadBtn.innerText = 'Uploading...';
         const result = await apiCall(`/squads/upload/${currentSeasonId}`, 'POST', formData);
-        if(result) {
+        if (result) {
             alert(result.message);
             fileInput.value = '';
             fetchSquadForSeason(currentSeasonId);
@@ -317,8 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data) {
             currentStoryId = data.story.id;
             const loggedInUserId = localStorage.getItem('userId');
-            appView.style.display = 'none';
-            storyDetailView.style.display = 'block';
+            showView(storyDetailView);
             detailStoryContent.style.display = 'block';
             detailStoryEditor.style.display = 'none';
             detailStoryTitle.innerText = data.story.title;
@@ -335,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const handleBackToForum = () => { location.hash = '#/forum'; };
-
     const handleEditStoryClick = () => {
         editStoryTitleInput.value = detailStoryTitle.innerText;
         editStoryContentTextarea.value = detailStoryContent.innerText;
@@ -343,13 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
         editStoryBtn.style.display = 'none';
         detailStoryEditor.style.display = 'block';
     };
-
     const handleCancelEdit = () => {
         detailStoryContent.style.display = 'block';
         editStoryBtn.style.display = 'block';
         detailStoryEditor.style.display = 'none';
     };
-
     const handleSaveChanges = async () => {
         const title = editStoryTitleInput.value;
         const content = editStoryContentTextarea.value;
@@ -362,12 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
             handleCancelEdit();
         }
     };
-
     const fetchComments = async (storyId) => {
         const comments = await apiCall(`/comments/${storyId}`);
         if (comments) renderComments(comments);
     };
-
     const renderComments = (comments) => {
         if (comments.length === 0) {
             commentList.innerHTML = '<p class="text-muted">No comments yet. Be the first to comment!</p>';
@@ -380,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `).join('');
     };
-
     const handlePostComment = async (event) => {
         event.preventDefault();
         const content = commentContent.value;
@@ -392,39 +382,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- CÁC HÀM TIỆN ÍCH & RENDER KHÁC ---
     const renderSeasonSelector = () => {
         seasonSelector.innerHTML = seasons.map(s => `<option value="${s.id}">${s.seasonName}</option>`).join('');
     };
 
     window.renderTable = (data, tableElement = playerTable) => {
-    if (!data || data.length === 0) {
-        tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
-        return;
-    }
-    tableElement.innerHTML = data.map(player => `
-        <tr data-player-id="${player.id}" style="cursor: pointer;">
-            <td>${player.dorsal || '-'}</td>
-            <td>
-                <div>
-                    <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
-                    <a href="#/player/${player.id}" class="player-name-link">${player.name}</a>
-                </div>
-                <span class="player-position">${player.position}</span>
-            </td>
-            <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
-            <td>${player.age}</td>
-            <td>${player.morale}</td>
-            <td>${player.personality}</td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
-            <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
-            <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
-            <td>${player.matches}</td>
-            <td>${player.goals} / ${player.assists}</td>
-            <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
-        </tr>
-    `).join('');
-};
+        if (!data || data.length === 0) {
+            tableElement.innerHTML = `<tr><td colspan="13" class="text-center">No player data available.</td></tr>`;
+            return;
+        }
+        // THAY ĐỔI QUAN TRỌNG: Link trỏ đến player.html?id=...
+        tableElement.innerHTML = data.map(player => `
+            <tr>
+                <td>${player.dorsal || '-'}</td>
+                <td>
+                    <div>
+                        <img class="flag-icon" src="https://flagcdn.com/16x12/${getCountryCode(player.nation)}.png" alt="${player.nation}">
+                        <a href="player.html?id=${player.id}" target="_blank" class="player-name-link text-decoration-none">${player.name}</a>
+                    </div>
+                    <span class="player-position">${player.position}</span>
+                </td>
+                <td><span class="ca-box" style="background-color: ${getCaColor(player.ca)};">${player.ca}</span></td>
+                <td>${player.age}</td>
+                <td>${player.morale}</td>
+                <td>${player.personality}</td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.workRate)};">${player.workRate}</span></td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.technique)};">${player.technique}</span></td>
+                <td><span class="attribute-box" style="background-color: ${getAttributeColor(player.pace)};">${player.pace}</span></td>
+                <td>${player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A'}</td>
+                <td>${player.matches}</td>
+                <td>${player.goals} / ${player.assists}</td>
+                <td><span class="stocking-box" style="background-color: ${getStockingColor(player.avgRating)};">${player.avgRating > 0 ? player.avgRating.toFixed(2) : '-'}</span></td>
+            </tr>
+        `).join('');
+    };
     
     const updateSidebar = (data) => {
         if (!data || data.length === 0) {
@@ -447,87 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof valA === 'string') return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
             return order === 'asc' ? (valA || 0) - (valB || 0) : (valB || 0) - (valA || 0);
         });
-        renderTable(sorted, playerTable); // Chú ý: Sắp xếp chỉ áp dụng cho bảng chính
+        renderTable(sorted, playerTable);
     };
 
-    const handleViewPlayerDetail = async (playerId) => {
-        const player = await apiCall(`/players/${playerId}`);
-        if(player) {
-            renderPlayerDetail(player);
-            showView(playerDetailView);
-        }
-    };
-
-    const renderPlayerDetail = (player) => {
-        document.getElementById('playerName').innerText = player.name;
-        document.getElementById('playerPosition').innerText = player.position;
-        document.getElementById('playerCA').innerText = player.ca;
-        document.getElementById('playerPA').innerText = player.pa;
-        document.getElementById('playerAge').innerText = player.age;
-        document.getElementById('playerValue').innerText = player.value > 0 ? `€${player.value.toFixed(1)}M` : 'N/A';
-        document.getElementById('playerPersonality').innerText = player.personality;
-        document.getElementById('playerHeight').innerText = `${player.height || '?'} cm`;
-        document.getElementById('playerWeight').innerText = `${player.weight || '?'} kg`;
-        document.getElementById('playerRightFoot').innerText = player.rightFoot;
-        document.getElementById('playerLeftFoot').innerText = player.leftFoot;
-        
-        const technicalAttrs = { Corners: player.corners, Crossing: player.crossing, Dribbling: player.dribbling, Finishing: player.finishing, "First Touch": player.firstTouch, "Free Kick": player.freeKick, Heading: player.heading, "Long Shots": player.longShots, "Long Throws": player.longThrows, Marking: player.marking, Passing: player.passing, "Penalty Taking": player.penalty, Tackling: player.tackling, Technique: player.technique };
-        const mentalAttrs = { Aggression: player.aggression, Anticipation: player.anticipation, Bravery: player.bravery, Composure: player.composure, Concentration: player.concentration, Decisions: player.decisions, Determination: player.determination, Flair: player.flair, Leadership: player.leadership, "Off The Ball": player.offTheBall, Positioning: player.positioning, Teamwork: player.teamwork, Vision: player.vision, "Work Rate": player.workRate };
-        const physicalAttrs = { Acceleration: player.acceleration, Agility: player.agility, Balance: player.balance, "Jumping Reach": player.jumping, "Natural Fitness": player.naturalFit, Pace: player.pace, Stamina: player.stamina, Strength: player.strength };
-
-        renderAttributeList('technical-attrs', technicalAttrs);
-        renderAttributeList('mental-attrs', mentalAttrs);
-        renderAttributeList('physical-attrs', physicalAttrs);
-    };
-
-    const renderAttributeList = (containerId, attributes) => {
-        const container = document.getElementById(containerId);
-        if(!container) return;
-        container.innerHTML = Object.entries(attributes).map(([name, value]) => `
-            <div class="attribute-row">
-                <span>${name}</span>
-                <span class="attribute-value" style="background-color: ${getAttributeColor(value)}">${value || 0}</span>
-            </div>
-        `).join('');
-    };
-
-    const handleBackClick = () => {
-        location.hash = lastViewedHash;
-    };
-
-    const initializeApp = async () => {
-        token = localStorage.getItem('authToken');
-        if (token) {
-            showView(appView);
-            await fetchSeasons();
-            await router();
-        } else {
-            showView(loginView);
-        }
-    };
-        
-    // --- GẮN CÁC EVENT LISTENERS ---
-    loginForm.addEventListener('submit', handleLogin);
-    registerForm.addEventListener('submit', handleRegister);
-    createSeasonBtn.addEventListener('click', handleCreateSeason);
-    seasonSelector.addEventListener('change', (e) => { location.hash = '#/squad'; fetchSquadForSeason(e.target.value); });
-    uploadBtn.addEventListener('click', handleUpload);
-    deleteSquadBtn.addEventListener('click', handleDeleteSquad);
-    saveStoryBtn.addEventListener('click', handleSaveStory);
-    filterInput.addEventListener('keyup', (e) => {
-        const searchTerm = e.target.value.toLowerCase();
-        const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
-        renderTable(filtered, playerTable);
-    });
-    backToForumBtn.addEventListener('click', handleBackToForum);
-    document.getElementById('backBtn').addEventListener('click', handleBackClick);
-    editStoryBtn.addEventListener('click', handleEditStoryClick);
-    cancelEditBtn.addEventListener('click', handleCancelEdit);
-    saveChangesBtn.addEventListener('click', handleSaveChanges);
-    commentForm.addEventListener('submit', handlePostComment);
-    window.addEventListener('hashchange', router);
-
-    // --- CÁC HÀM TIỆN ÍCH ---
     window.getCaColor = (value) => {
         if (value >= 180) return '#28a745'; if (value >= 160) return '#d4edda'; if (value >= 140) return '#cce5ff';
         if (value >= 120) return '#fff3cd'; if (value > 0) return '#f8d7da'; return '#f8f9fa';
@@ -544,6 +458,45 @@ document.addEventListener('DOMContentLoaded', () => {
         const map = {"AFG":"af","ALB":"al","ALG":"dz","AND":"ad","ANG":"ao","ATG":"ag","ARG":"ar","ARM":"am","AUS":"au","AUT":"at","AZE":"az","BAH":"bs","BHR":"bh","BAN":"bd","BRB":"bb","BLR":"by","BEL":"be","BLZ":"bz","BEN":"bj","BTN":"bt","BOL":"bo","BIH":"ba","BOT":"bw","BRA":"br","BRU":"bn","BUL":"bg","BFA":"bf","BDI":"bi","CAM":"kh","CMR":"cm","CAN":"ca","CPV":"cv","CTA":"cf","CHA":"td","CHI":"cl","CHN":"cn","COL":"co","COM":"km","CGO":"cg","COD":"cd","CRC":"cr","CIV":"ci","CRO":"hr","CUB":"cu","CYP":"cy","CZE":"cz","DEN":"dk","DJI":"dj","DMA":"dm","DOM":"do","ECU":"ec","EGY":"eg","SLV":"sv","EQG":"gq","ERI":"er","EST":"ee","ETH":"et","FIJ":"fj","FIN":"fi","FRA":"fr","GAB":"ga","GAM":"gm","GEO":"ge","GER":"de","GHA":"gh","GRE":"gr","GRN":"gd","GUA":"gt","GUI":"gn","GNB":"gw","GUY":"gy","HAI":"ht","HON":"hn","HKG":"hk","HUN":"hu","ISL":"is","IND":"in","IDN":"id","IRN":"ir","IRQ":"iq","IRL":"ie","ISR":"il","ITA":"it","JAM":"jm","JPN":"jp","JOR":"jo","KAZ":"kz","KEN":"ke","PRK":"kp","KOR":"kr","KOS":"xk","KUW":"kw","KGZ":"kg","LAO":"la","LAT":"lv","LBN":"lb","LES":"ls","LBR":"lr","LBY":"ly","LIE":"li","LTU":"lt","LUX":"lu","MAC":"mo","MKD":"mk","MAD":"mg","MWI":"mw","MAS":"my","MDV":"mv","MLI":"ml","MLT":"mt","MTN":"mr","MRI":"mu","MEX":"mx","MDA":"md","MGL":"mn","MNE":"me","MAR":"ma","MOZ":"mz","MYA":"mm","NAM":"na","NEP":"np","NED":"nl","NCL":"nc","NZL":"nz","NCA":"ni","NIG":"ne","NGA":"ng","NOR":"no","OMA":"om","PAK":"pk","PLE":"ps","PAN":"pa","PNG":"pg","PAR":"py","PER":"pe","PHI":"ph","POL":"pl","POR":"pt","PUR":"pr","QAT":"qa","ROU":"ro","RUS":"ru","RWA":"rw","SKN":"kn","LCA":"lc","VIN":"vc","SAM":"ws","SMR":"sm","STP":"st","KSA":"sa","SEN":"sn","SRB":"rs","SEY":"sc","SLE":"sl","SGP":"sg","SVK":"sk","SVN":"si","SOL":"sb","SOM":"so","RSA":"za","ESP":"es","SRI":"lk","SUD":"sd","SSD":"ss","SUR":"sr","SWE":"se","SUI":"ch","SYR":"sy","TAH":"pf","TPE":"tw","TJK":"tj","TAN":"tz","THA":"th","TLS":"tl","TOG":"tg","TGA":"to","TRI":"tt","TUN":"tn","TUR":"tr","TKM":"tm","UGA":"ug","UKR":"ua","UAE":"ae","ENG":"gb-eng","SCO":"gb-sct","WAL":"gb-wls","NIR":"gb-nir","USA":"us","URU":"uy","UZB":"uz","VAN":"vu","VEN":"ve","VIE":"vn","YEM":"ye","ZAM":"zm","ZIM":"zw"};
         return map[nation] || "un";
     };
+
+    // --- KHỞI TẠO ỨNG DỤNG ---
+    const initializeApp = async () => {
+        token = localStorage.getItem('authToken');
+        if (token) {
+            showView(appView);
+            await fetchSeasons();
+            await router();
+        } else {
+            showView(loginView);
+        }
+    };
+        
+    // --- GẮN CÁC EVENT LISTENERS ---
+    loginForm.addEventListener('submit', handleLogin);
+    registerForm.addEventListener('submit', handleRegister);
+    createSeasonBtn.addEventListener('click', handleCreateSeason);
+    seasonSelector.addEventListener('change', (e) => {
+        location.hash = '#/squad';
+        fetchSquadForSeason(e.target.value)
+    });
+    uploadBtn.addEventListener('click', handleUpload);
+    deleteSquadBtn.addEventListener('click', handleDeleteSquad);
+    saveStoryBtn.addEventListener('click', handleSaveStory);
+    filterInput.addEventListener('keyup', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = playersData.filter(p => p.name.toLowerCase().includes(searchTerm));
+        renderTable(filtered, playerTable);
+    });
     
+    backToForumBtn.addEventListener('click', handleBackToForum);
+    document.getElementById('backBtn').addEventListener('click', handleBackClick);
+    
+    editStoryBtn.addEventListener('click', handleEditStoryClick);
+    cancelEditBtn.addEventListener('click', handleCancelEdit);
+    saveChangesBtn.addEventListener('click', handleSaveChanges);
+    commentForm.addEventListener('submit', handlePostComment);
+
+    window.addEventListener('hashchange', router);
+
     initializeApp();
 });

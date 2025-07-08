@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Player Details</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container mt-4">
+        <a href="javascript:history.back()" class="btn btn-secondary mb-3"><i class="bi bi-arrow-left"></i> Back</a>
+        
+        <div id="playerDetailView" class="main-content-card p-4">
+             <div class="row">
+                <div class="col-md-4 border-end">
+                    <h2 id="playerName">Loading...</h2>
+                    <p id="playerPosition" class="text-muted"></p>
+                    <hr>
+                    <div class="d-flex justify-content-between"><span>Current Ability:</span> <span id="playerCA" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Potential Ability:</span> <span id="playerPA" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Age:</span> <span id="playerAge" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Value:</span> <span id="playerValue" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Personality:</span> <span id="playerPersonality" class="fw-bold"></span></div>
+                    <hr>
+                    <div class="d-flex justify-content-between"><span>Height:</span> <span id="playerHeight" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Weight:</span> <span id="playerWeight" class="fw-bold"></span></div>
+                    <hr>
+                    <div class="d-flex justify-content-between"><span>Right Foot:</span> <span id="playerRightFoot" class="fw-bold"></span></div>
+                    <div class="d-flex justify-content-between"><span>Left Foot:</span> <span id="playerLeftFoot" class="fw-bold"></span></div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-4"><h5>Technical</h5><div id="technical-attrs"></div></div>
+                        <div class="col-4"><h5>Mental</h5><div id="mental-attrs"></div></div>
+                        <div class="col-4"><h5>Physical</h5><div id="physical-attrs"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="player.js"></script>
+</body>
+</html>
